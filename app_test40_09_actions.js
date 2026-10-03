@@ -1,4 +1,4 @@
-/* app_test39_09_actions.js — 画面の操作（クリック・入力など）の受け口
+/* app_test40_09_actions.js — 画面の操作（クリック・入力など）の受け口
  * HTMLの data-on-◯◯ 属性に書いた名前をキーに、下の HANDLERS から処理を呼びます（旧インライン onclick の代わり）。
  * ・処理の中の this は、その属性を持つ要素。event.currentTarget も同じ要素になります。
  * ・チャンネル設定の行は data-ci（チャンネル番号）/ data-ti（タグ番号）で対象を渡します。 */
@@ -126,6 +126,7 @@ Object.assign(HANDLERS, {
   'tag-del': function () { deleteTagConfig(Number(this.dataset.ci), Number(this.dataset.ti)); },
   'tag-add': function () { addTagConfig(Number(this.dataset.ci)); },
   'ch-test': function () { testWebhook(Number(this.dataset.ci)); },
+  'preview-zoom': function () { togglePreviewZoom(); },
   'ch-del': function () { deleteChannelConfig(Number(this.dataset.ci)); }
 });
 (function () {

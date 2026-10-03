@@ -1,4 +1,4 @@
-/* app_test39_06_post.js — Discordへの投稿処理
+/* app_test40_06_post.js — Discordへの投稿処理
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   // 投稿処理は、段階ごとの小さな関数に分けてある（validateBeforePost → resolvePostTarget → syncWebhookAvatars → sendToSelectedChannels → showPostResult）

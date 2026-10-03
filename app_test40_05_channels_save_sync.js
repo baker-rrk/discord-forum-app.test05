@@ -1,4 +1,4 @@
-/* app_test39_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
+/* app_test40_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function addChannelConfig() { appState.channels.push({ id: uid(), name: "新しいチャンネル", webhookUrl: "", tags: [] }); renderChannelConfigList(); saveState(); }

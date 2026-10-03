@@ -295,3 +295,14 @@
 .ho-bar[data-ho-act="toggle"] { cursor: pointer; } .ho-splitblk { border-style: dashed; background: transparent; }
 .ho-splitline { text-align: center; color: #b5bac1; font-size: 0.78rem; border-top: 1px dashed var(--dc-border); margin: 12px 0; padding-top: 4px; }
 .ho-block .block-body.collapsed { display: none; } .ho-block .drop-zone { cursor: pointer; }
+/* 入力欄もプレビュー（Discord風）と同じフォントにそろえる（「~」などの文字の高さが、入力欄とプレビューでずれないように） */
+input, textarea, select, button { font-family: inherit; }
+/* HO：画像のドラッグ中の枠・案内 */
+#hoPanel { position: relative; } #hoPanel.ho-filedrag { outline: 3px dashed #5865f2; outline-offset: 4px; border-radius: 8px; }
+#hoPanel.ho-filedrag::after { content: '🖼️ ここにドロップして画像を追加'; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: #5865f2; color: #fff; padding: 6px 16px; border-radius: 16px; font-size: 0.85rem; font-weight: bold; pointer-events: none; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+#hoPanel .drop-zone.dragover { border-color: #5865f2; background: rgba(88,101,242,.18); }
+.ho-imghint { font-size: 0.8rem; color: #dbdee1; background: rgba(88,101,242,.12); border: 1px dashed #5865f2; border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.6; }
+/* プレビューの拡大表示 */
+.preview-tools { display: flex; justify-content: flex-end; margin-bottom: 6px; } .preview-tools button { padding: 4px 12px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--dc-border); background: #4e5058; color: #fff; cursor: pointer; }
+.preview-area.zoomed { position: fixed; inset: 12px; z-index: 900; overflow: auto; background: var(--dc-bg-tertiary); padding: 16px; border-radius: 10px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.65); }
+.preview-area.zoomed .discord-preview-box { position: static; max-width: 920px; margin: 0 auto; zoom: 1.25; }

@@ -1,4 +1,4 @@
-/* app_test39_08_events.js — ブロック編集画面のイベント（インライン onclick 等の代わり）
+/* app_test40_08_events.js — ブロック編集画面のイベント（インライン onclick 等の代わり）
  * HTML側の data-ba（クリック）/ data-bi（入力）/ data-bc（変更）属性を見て、document で一括して受け取ります。
  * 各ブロックは data-bid（ブロックID）で特定し、その時点の並び順を blockIdx() で引きます。 */
 (function () {

@@ -232,3 +232,10 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   const m2=env.hoMessages({name:'HO1',tagline:'導入',blocks:[{type:'split',id:'s'},it('A','a'),{type:'split',id:'t'},{type:'split',id:'u'}]});
   e(m2.length===1&&m2[0].text.startsWith('# HO1：__導入__\n\n\n## ❚ A'),'先頭・末尾・連続する分割ブロックは無視され、見出しは最初のテキストに付く');
 }
+
+{ // 入力欄のフォント・プレビュー拡大・HOの画像ドラッグ枠
+  const app=loadApp(), css=fs.readFileSync(path.join(DIR,'discord_forum_app_test'+V+'.css'),'utf8'), html=fs.readFileSync(HTML,'utf8');
+  console.log((/input, textarea, select, button \{ font-family: inherit; \}/.test(css)?'OK  ':'NG  ')+'入力欄・テキストエリアもプレビューと同じフォントを継承（「~」の高さをそろえる）');
+  console.log((/id="previewZoomBtn" data-on-click="preview-zoom"/.test(html)&&/'preview-zoom': function/.test(app)&&/function togglePreviewZoom/.test(app)&&/\.preview-area\.zoomed \{/.test(css)?'OK  ':'NG  ')+'プレビューの拡大表示（ボタン・処理・スタイル）がそろっている');
+  console.log((/ho-filedrag/.test(css)&&/ho-filedrag/.test(app)&&/ho-imghint/.test(app)?'OK  ':'NG  ')+'HOの画像ドラッグ中の枠と案内文がある');
+}

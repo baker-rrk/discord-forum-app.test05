@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test39.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test40.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -278,6 +278,30 @@ async def main():
         await pg.locator('#hoPanel [data-hb] .ho-handle').first.drag_to(tgt,target_position={'x':60,'y':max(hh-4,2)}); await pg.wait_for_timeout(300)
         ok(await pg.evaluate("secretHOs[0].blocks.map(b=>b.keyName).join()")=='K1,K0,K2','T19 項目ブロックをドラッグ＆ドロップで並べ替えられる（公開情報と同じ操作）',await pg.evaluate("secretHOs[0].blocks.map(b=>b.keyName).join()"))
         ok(not pg.errs,'T19b エラーなし',pg.errs[:2]); await pg.context.close()
+        # T20 入力欄のフォント・プレビュー拡大・HOの画像案内とドラッグ枠
+        pg=await newpage(b,None)
+        await pg.evaluate("blockOrder.find(b=>b.id==='intro').collapsed=false;renderBlockUI()")
+        f=await pg.evaluate("[getComputedStyle(document.querySelector('#intro')).fontFamily,getComputedStyle(document.querySelector('#title')).fontFamily,getComputedStyle(document.querySelector('#pvContent')).fontFamily]")
+        ok(f[0]==f[2] and f[1]==f[2],'T20 入力欄・テキストエリアのフォントがプレビューと同じ（「~」の高さがそろう）',f)
+        await pg.fill('#intro','期間：1日~3日'); await pg.wait_for_timeout(300)
+        await pg.locator('#previewZoomBtn').click(); await pg.wait_for_timeout(300)
+        bx=await pg.locator('.preview-area.zoomed').bounding_box()
+        ok(bx and bx['width']>1100 and bx['height']>800 and '閉じる' in await pg.inner_text('#previewZoomBtn'),'T20 プレビューを拡大表示できる（画面いっぱい）',bx)
+        ok('1日~3日' in await pg.inner_text('#pvContent'),'T20 拡大表示でも内容が表示されている')
+        await pg.keyboard.press('Escape'); await pg.wait_for_timeout(200)
+        ok(await pg.locator('.preview-area.zoomed').count()==0 and '拡大表示' in await pg.inner_text('#previewZoomBtn'),'T20 Escで拡大を閉じられる')
+        await pg.locator('[data-ho-act="add-ho"]').click(); await pg.locator('[data-ho-act="add-image"]').click(); await pg.wait_for_timeout(200)
+        ok('ドラッグ＆ドロップ' in await pg.inner_text('#hoPanel .ho-imghint') and '画像を追加' in await pg.inner_text('#hoPanel .ho-imghint'),'T20 HOに「画像を追加できる」案内文がある')
+        await pg.locator('#previewZoomBtn').click(); await pg.wait_for_timeout(200)
+        ok(await pg.locator('.preview-area.zoomed #hoPreviewBox').is_visible(),'T20 HOのDMプレビューも拡大表示できる'); await pg.keyboard.press('Escape')
+        r=await pg.evaluate("""()=>{const mk=()=>{const dt=new DataTransfer();dt.items.add(new File(['x'],'a.png',{type:'image/png'}));return dt;};
+          const z=[...document.querySelectorAll('#hoPanel .drop-zone')].pop(), pn=document.getElementById('hoPanel');
+          z.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:mk()}));
+          const over={panel:pn.classList.contains('ho-filedrag'),zone:z.classList.contains('dragover'),label:getComputedStyle(pn,'::after').content};
+          z.dispatchEvent(new DragEvent('dragleave',{bubbles:true,cancelable:true,relatedTarget:document.body}));
+          return {over,after:pn.classList.contains('ho-filedrag')};}""")
+        ok(r['over']['panel'] and r['over']['zone'] and 'ドロップ' in r['over']['label'] and not r['after'],'T20 画像をドラッグ中はHOの入力欄と画像枠に枠・案内が出て、離れると消える',r)
+        ok(not pg.errs,'T20 エラーなし',pg.errs[:2]); await pg.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

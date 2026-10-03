@@ -1,4 +1,4 @@
-/* app_test39_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
+/* app_test40_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
  * 各HOは { name, tagline, blocks }。blocks は公開情報と同じ「項目ブロック」{ type:'item', keyName, val, decorStyle, subItems } と画像ブロック { type:'image', previewUrl }。
  * 出力の1行目は「# HO名：__tagline__」（tagline が空なら見出し行なし）。HOの内容はDiscordへは送信されません（DMへ手動で貼る下書き）。 */
 const DECOR_LABELS = [['default', '引用（> ）'], ['simple', '簡易リスト'], ['fancy', '装飾リスト'], ['codeblock', 'コードブロック'], ['none', '装飾なし']];
@@ -48,7 +48,7 @@ function renderHoPanel() {
     if (b.type === 'image') return `<div class="ho-block" data-hb="${b.id}"><div class="ho-bar" data-ho-act="toggle">${handle}<span style="flex:1">${arrow} 🖼️ 画像${b.previewUrl ? ' <span class="type-badge has-val">🟢 設定済み</span>' : ''}</span>${ctl}</div><div class="block-body ${col ? 'collapsed' : ''}"><div class="drop-zone" data-ho-act="pick" title="クリックで選択／ここへドラッグ＆ドロップ">🖼️ ここに画像をドラッグ＆ドロップ、またはクリックして選択（複数可）</div><input type="file" accept="image/*" multiple data-ho-in="file" style="display:none"><input type="text" data-ho-in="url" placeholder="画像URL（アップロードの代わりに入力も可）" value="${escapeHTML(/^(data|blob):/.test(b.previewUrl) ? '' : b.previewUrl)}" style="margin-top:6px">${b.previewUrl ? `<img class="ho-thumb" src="${escapeHTML(imgSrc(b.previewUrl))}" alt=""><button type="button" class="btn-sort btn-danger" data-ho-act="img-clear" style="margin-top:6px">🗑️ 画像を解除</button>` : ''}</div></div>`;
     return `<div class="ho-block" data-hb="${b.id}"><div class="ho-bar" data-ho-act="toggle">${handle}<span style="flex:1;display:flex;gap:6px;align-items:center;flex-wrap:wrap">${arrow} 📑 ${hoBadge(b)}<input type="text" data-ho-in="key" value="${escapeHTML(b.keyName)}" placeholder="項目名（空欄なら見出しなし）" style="max-width:200px;font-weight:bold">${hoDecorSelect(b)}</span>${ctl}</div><div class="block-body ${col ? 'collapsed' : ''}">${fmt}<textarea data-ho-in="text" placeholder="本文を入力">${escapeHTML(b.val)}</textarea>${hoSubsHtml(b)}</div></div>`;
   }).join('');
-  box.innerHTML = `<div class="card"><div class="ho-head"><input type="text" data-ho-in="name" value="${escapeHTML(h.name)}" placeholder="HO名（例: HO2。タブ名に反映されます）" style="max-width:200px"><button type="button" class="btn-sort" data-ho-act="tab-left" title="タブを左へ">◀ 左へ</button><button type="button" class="btn-sort" data-ho-act="tab-right" title="タブを右へ">右へ ▶</button><button type="button" class="btn-sort btn-danger" data-ho-act="del-ho">🗑 このHOを削除</button></div><input type="text" data-ho-in="tagline" value="${escapeHTML(h.tagline)}" placeholder="導入の一文（1行目「# HO名：__ここ__」。空欄なら見出し行なし）" style="margin-bottom:12px"><div class="ho-add" style="margin-bottom:10px"><button type="button" class="btn btn-secondary" data-ho-act="expand-all">▼ すべて開く</button><button type="button" class="btn btn-secondary" data-ho-act="collapse-all">▲ すべて閉じる</button></div>${blocks}<div class="ho-add"><button type="button" class="btn btn-secondary" data-ho-act="add-item">＋ 項目ブロックを追加</button><button type="button" class="btn btn-secondary" data-ho-act="add-image">＋ 画像を追加</button><button type="button" class="btn btn-secondary" data-ho-act="add-split">✂️ 投稿分割</button><button type="button" class="btn btn-secondary" data-ho-act="auto-split">✂️ 自動分割</button></div></div>`;
+  box.innerHTML = `<div class="card"><div class="ho-head"><input type="text" data-ho-in="name" value="${escapeHTML(h.name)}" placeholder="HO名（例: HO2。タブ名に反映されます）" style="max-width:200px"><button type="button" class="btn-sort" data-ho-act="tab-left" title="タブを左へ">◀ 左へ</button><button type="button" class="btn-sort" data-ho-act="tab-right" title="タブを右へ">右へ ▶</button><button type="button" class="btn-sort btn-danger" data-ho-act="del-ho">🗑 このHOを削除</button></div><input type="text" data-ho-in="tagline" value="${escapeHTML(h.tagline)}" placeholder="導入の一文（1行目「# HO名：__ここ__」。空欄なら見出し行なし）" style="margin-bottom:12px"><div class="ho-imghint">🖼️ 画像は、下の「＋ 画像を追加」ボタンから追加できます。画像ファイルをこの入力欄へドラッグ＆ドロップしても追加できます（画像ブロックの枠に落とすと、そのブロックに入ります）。</div><div class="ho-add" style="margin-bottom:10px"><button type="button" class="btn btn-secondary" data-ho-act="expand-all">▼ すべて開く</button><button type="button" class="btn btn-secondary" data-ho-act="collapse-all">▲ すべて閉じる</button></div>${blocks}<div class="ho-add"><button type="button" class="btn btn-secondary" data-ho-act="add-item">＋ 項目ブロックを追加</button><button type="button" class="btn btn-secondary" data-ho-act="add-image">＋ 画像を追加（ドラッグ＆ドロップも可）</button><button type="button" class="btn btn-secondary" data-ho-act="add-split">✂️ 投稿分割</button><button type="button" class="btn btn-secondary" data-ho-act="auto-split">✂️ 自動分割</button></div></div>`;
 }
 const hoHeading = h => { const t = (h.tagline || '').trim(); return t ? `# ${(h.name || '').trim() || 'HO'}：__${t}__` : ''; };
 function hoMessages(h) {   // DMに貼る単位。連続する項目ブロックは1つのメッセージにまとめ、画像・投稿分割ブロックのところで区切る（ブロック間は空行2つ）
@@ -153,13 +153,16 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
     if (hd) { const w = hd.closest('[data-hb]'); dragHb = w.dataset.hb; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'ho-block'); e.dataTransfer.setDragImage(w, 10, 10); w.classList.add('dragging'); return; }
     const tb = e.target.closest && e.target.closest('[data-hdrag]'); if (tb) { dragTab = Number(tb.dataset.hdrag); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'ho-tab'); }
   });
-  document.addEventListener('dragend', () => { dragHb = null; dragTab = -1; document.querySelectorAll('.dragging,.ho-over').forEach(x => x.classList.remove('dragging', 'ho-over')); });
+  const clearFileDrag = () => { const pn = document.getElementById('hoPanel'); if (pn) { pn.classList.remove('ho-filedrag'); pn.querySelectorAll('.drop-zone.dragover').forEach(x => x.classList.remove('dragover')); } };
+  document.addEventListener('dragleave', e => { const pn = document.getElementById('hoPanel'); if (pn && !(e.relatedTarget && pn.contains(e.relatedTarget))) clearFileDrag(); });
+  document.addEventListener('dragend', () => { clearFileDrag(); dragHb = null; dragTab = -1; document.querySelectorAll('.dragging,.ho-over').forEach(x => x.classList.remove('dragging', 'ho-over')); });
   document.addEventListener('dragover', e => {
     const w = e.target.closest && e.target.closest('[data-hb]'), tb = e.target.closest && e.target.closest('[data-hdrag]'), files = e.dataTransfer && [...e.dataTransfer.types].includes('Files');
     document.querySelectorAll('.ho-over').forEach(x => { if (x !== w && x !== tb) x.classList.remove('ho-over'); });
-    if (dragHb && w) { e.preventDefault(); w.classList.add('ho-over'); } else if (dragTab >= 0 && tb) { e.preventDefault(); tb.classList.add('ho-over'); } else if (files && e.target.closest && e.target.closest('#hoPanel')) e.preventDefault();
+    if (dragHb && w) { e.preventDefault(); w.classList.add('ho-over'); } else if (dragTab >= 0 && tb) { e.preventDefault(); tb.classList.add('ho-over'); } else if (files && e.target.closest && e.target.closest('#hoPanel')) { e.preventDefault(); const pn = document.getElementById('hoPanel'), z = e.target.closest('.drop-zone'); pn.classList.add('ho-filedrag'); pn.querySelectorAll('.drop-zone.dragover').forEach(x => { if (x !== z) x.classList.remove('dragover'); }); if (z) z.classList.add('dragover'); }
   });
   document.addEventListener('drop', async e => {   // ブロックの並べ替え／タブの並べ替え／画像ファイルのドロップ（画像ブロック上ならそのブロックへ、それ以外は末尾に追加）
+    clearFileDrag();
     const h = cur(), w = e.target.closest && e.target.closest('[data-hb]'), tb = e.target.closest && e.target.closest('[data-hdrag]');
     if (dragHb && h && w) { e.preventDefault(); if (w.dataset.hb !== dragHb) { const r = w.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2, from = h.blocks.findIndex(x => x.id === dragHb), [m] = h.blocks.splice(from, 1), ti = h.blocks.findIndex(x => x.id === w.dataset.hb); h.blocks.splice(after ? ti + 1 : ti, 0, m); renderHoPanel(); changed(); } dragHb = null; return; }
     if (dragTab >= 0 && tb) { e.preventDefault(); moveTab(dragTab, Number(tb.dataset.hdrag)); dragTab = -1; return; }
@@ -172,3 +175,11 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
 })();
 // プレビューの再描画に合わせて、HOタブ表示中はDMプレビューも更新する
 (function () { const orig = renderPreviewNow; renderPreviewNow = function () { orig(); if (activeHO >= 0) renderHoPreview(); }; })();
+
+// プレビューの拡大表示（公開情報・HOのDMプレビュー共通）。ボタンまたはEscで閉じる
+function togglePreviewZoom(force) {
+  const pa = document.querySelector('.preview-area'), btn = document.getElementById('previewZoomBtn'); if (!pa) return;
+  const on = typeof force === 'boolean' ? force : !pa.classList.contains('zoomed');
+  pa.classList.toggle('zoomed', on); if (btn) btn.textContent = on ? '✕ 拡大を閉じる' : '🔍 拡大表示';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.querySelector('.preview-area.zoomed') && !document.querySelector('[role="dialog"]')) togglePreviewZoom(false); });
