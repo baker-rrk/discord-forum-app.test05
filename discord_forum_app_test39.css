@@ -291,3 +291,7 @@
 .ho-count { font-size: 0.75rem; color: #b5bac1; align-self: center; } .ho-count.over { color: #f23f42; font-weight: bold; }
 .ho-copyall { margin-left: auto; padding: 3px 10px; font-size: 0.78rem; border-radius: 4px; border: 1px solid var(--dc-border); background: #4e5058; color: #fff; cursor: pointer; }
 .ho-bar select, .sub-item-head select { width: auto; }
+.ho-handle { cursor: grab; padding: 0 6px; color: #b5bac1; user-select: none; } .ho-block.dragging { opacity: 0.4; } .ho-block.ho-over { outline: 2px dashed #5865f2; } .ho-tab.ho-over { outline: 2px dashed #5865f2; }
+.ho-bar[data-ho-act="toggle"] { cursor: pointer; } .ho-splitblk { border-style: dashed; background: transparent; }
+.ho-splitline { text-align: center; color: #b5bac1; font-size: 0.78rem; border-top: 1px dashed var(--dc-border); margin: 12px 0; padding-top: 4px; }
+.ho-block .block-body.collapsed { display: none; } .ho-block .drop-zone { cursor: pointer; }

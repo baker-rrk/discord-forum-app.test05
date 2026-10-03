@@ -1,4 +1,4 @@
-/* app_test38_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
+/* app_test39_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function openPostStatusDialog(scId) {

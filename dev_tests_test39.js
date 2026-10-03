@@ -220,3 +220,15 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   const r=env.sanitizeHOs([{name:5,blocks:[{type:'image',previewUrl:null},{type:'text',val:3},{type:'item',keyName:7,decorStyle:'x',subItems:[null,{title:1,style:'zzz'}]},null]},'bad',null]);
   e(r.length===1&&r[0].name==='5'&&r[0].blocks.length===3&&r[0].blocks[0].previewUrl===''&&r[0].blocks[1].type==='item'&&r[0].blocks[1].val==='3'&&r[0].blocks[2].decorStyle==='default'&&r[0].blocks[2].subItems.length===1&&r[0].blocks[2].subItems[0].style==='plain','HOデータの整形（旧形式のテキストブロックは項目ブロックへ変換・不正な値は安全な形に）');
 }
+
+{ // HOのDMメッセージ：連続する項目ブロックは1つにまとめ、画像・投稿分割のところで区切る
+  const app=loadApp(), grab=(re)=>app.match(re)[0];
+  const fnText=n=>{const a=app.indexOf('function '+n);return app.slice(a,app.indexOf('\n  }\n',a)+5).replace(/^\n/,'');};
+  const env=new Function(grab(/const defaultFormatConfig = \{[\s\S]*?\n\s*\};/)+'\n'+fnText('formatItemSection')+'\n'+grab(/const hoHeading = [^\n]*/)+'\n'+grab(/function hoMessages[\s\S]*?\n\}\n/)+'\nreturn {defaultFormatConfig,hoMessages};')();
+  globalThis.defaultFormatConfig=env.defaultFormatConfig; globalThis.appState={formatConfig:env.defaultFormatConfig};
+  const it=(k,v)=>({type:'item',keyName:k,val:v,decorStyle:'default',subItems:[]}), e=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
+  const m1=env.hoMessages({name:'HO1',tagline:'',blocks:[it('A','a'),it('B','b'),{type:'split',id:'s'},it('C','c'),{type:'image',previewUrl:'u',id:'i'},it('D','d')]});
+  e(m1.map(m=>m.kind).join()==='text,split,text,image,text'&&m1[0].text==='## ❚ A\n> a\n\n\n## ❚ B\n> b'&&m1[2].text==='## ❚ C\n> c','コピー単位：連続する項目は1つにまとまり、分割・画像のところで区切られる');
+  const m2=env.hoMessages({name:'HO1',tagline:'導入',blocks:[{type:'split',id:'s'},it('A','a'),{type:'split',id:'t'},{type:'split',id:'u'}]});
+  e(m2.length===1&&m2[0].text.startsWith('# HO1：__導入__\n\n\n## ❚ A'),'先頭・末尾・連続する分割ブロックは無視され、見出しは最初のテキストに付く');
+}

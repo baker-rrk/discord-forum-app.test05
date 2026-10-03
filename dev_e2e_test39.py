@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test38.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test39.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -193,14 +193,14 @@ async def main():
         await pg.locator('#hoPanel [data-ho-in="file"]').set_input_files(png.name); await pg.wait_for_timeout(800)
         await pg.locator('#hoPanel [data-ho-in="tagline"]').fill('あなたは急遽、鬼狩部隊に入隊した。'); await pg.wait_for_timeout(300)
         msgs=await pg.evaluate('hoMessages(secretHOs[0]).map(m=>m.kind==="text"?m.text:"[image]")')
-        ok(msgs[0]=='# HO2：__あなたは急遽、鬼狩部隊に入隊した。__\n\n\n## ❚ PC 作成\n> 年齢：10 代後半～20 代前半推奨','T17 1行目は「# HO2：__導入文__」の見出し行＋項目ブロック',msgs[0])
-        ok(msgs[1]=='## ❚ NPC 情報\n雨月（うげつ）\n> あなたの血の繋がった兄。\n> 優しい性格。' and msgs[2]=='[image]','T17 サブ項目のタイトルは引用の外、本文は引用。画像は間に挟める',msgs[1:])
-        ok(await pg.locator('#hoPreviewBox [data-ho-copy="text"]').count()==2 and await pg.locator('#hoPreviewBox [data-ho-copy="img"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="dl"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="all"]').count()==1,'T17 プレビューにメッセージごとのコピー／ダウンロードと「まとめてコピー」が並ぶ')
+        ok(msgs[0]=='# HO2：__あなたは急遽、鬼狩部隊に入隊した。__\n\n\n## ❚ PC 作成\n> 年齢：10 代後半～20 代前半推奨\n\n\n## ❚ NPC 情報\n雨月（うげつ）\n> あなたの血の繋がった兄。\n> 優しい性格。' and msgs[1]=='[image]' and len(msgs)==2,'T17 連続する項目ブロックは1つのメッセージにまとまり（見出しは先頭）、画像で区切られる',msgs)
+        ok('\n雨月（うげつ）\n> あなたの血の繋がった兄。' in msgs[0],'T17 サブ項目のタイトルは引用の外、本文は引用')
+        ok(await pg.locator('#hoPreviewBox [data-ho-copy="text"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="img"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="dl"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="all"]').count()==0,'T17 コピーボタンは画像で区切られた単位ごと（項目ごとには出ない）')
         ok(await pg.locator('#hoPanel [data-ho-copy]').count()==0,'T17 入力欄側にはコピーボタンがない')
         await pg.locator('#hoPreviewBox [data-ho-copy="text"]').first.click(); await pg.wait_for_timeout(300)
         ok('コピー' in (await pg.inner_text('#toast-box')),'T17 テキストのコピーボタンが動く')
         await pg.locator('#hoPanel [data-ho-in="sub-style"]').select_option('bold'); await pg.wait_for_timeout(200)
-        ok('**雨月（うげつ）**' in (await pg.evaluate('hoMessages(secretHOs[0])[1].text')),'T17 サブタイトルを太字に切り替えられる')
+        ok('**雨月（うげつ）**' in (await pg.evaluate('hoMessages(secretHOs[0])[0].text')),'T17 サブタイトルを太字に切り替えられる')
         await pg.locator('#hoPanel [data-ho-in="tagline"]').fill(''); await pg.wait_for_timeout(200)
         ok((await pg.evaluate('hoMessages(secretHOs[0])[0].text')).startswith('## ❚ PC 作成'),'T17 導入文が空なら見出し行は出力されない')
         await pg.locator('#hoPanel [data-ho-in="tagline"]').fill('導入'); await pg.locator('[data-ho-act="down"]').first.click()
@@ -231,6 +231,53 @@ async def main():
         await pg.locator('[data-ba="sub-del"]').first.click(); await pg.wait_for_timeout(200)
         ok(await pg.evaluate("blockOrder.find(b=>b.id==='intro').subItems.length")==0 and '**' not in await pg.evaluate("buildPostData()[0].text"),'T18 サブ項目を削除できる')
         ok(not pg.errs,'T18 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T19 HOタブの並べ替え・投稿分割・公開情報と同じブロック操作
+        png2=tempfile.NamedTemporaryFile(suffix='.png',delete=False); png2.write(open(png.name,'rb').read()); png2.close()
+        pg=await newpage(b,None)
+        for n in ['A','B','C']:
+            await pg.locator('[data-ho-act="add-ho"]').click(); await pg.locator('#hoPanel [data-ho-in="name"]').fill('HO'+n)
+        names=lambda: pg.evaluate('secretHOs.map(h=>h.name).join()')
+        await pg.locator('[data-ho-act="tab-left"]').click(); await pg.wait_for_timeout(200)
+        ok(await names()=='HOA,HOC,HOB' and 'HOC' in await pg.locator('.ho-tab.active').inner_text(),'T19 [◀ 左へ]でHOタブを並べ替えられる（開いているHOはそのまま）',await names())
+        await pg.locator('[data-ho-act="tab-right"]').click(); await pg.wait_for_timeout(200)
+        ok(await names()=='HOA,HOB,HOC','T19 [右へ ▶]で戻せる')
+        await pg.locator('.ho-tab[data-hdrag="0"]').drag_to(pg.locator('.ho-tab[data-hdrag="2"]')); await pg.wait_for_timeout(300)
+        ok(await names()=='HOB,HOC,HOA','T19 タブをドラッグ＆ドロップで並べ替えられる',await names())
+        # 投稿分割・コピー単位
+        await pg.locator('.ho-tab[data-hdrag="0"]').click()
+        await pg.locator('#hoPanel [data-ho-in="key"]').fill('甲'); await pg.locator('#hoPanel [data-ho-in="text"]').fill('こう')
+        await pg.locator('[data-ho-act="add-item"]').click(); await pg.locator('#hoPanel [data-ho-in="key"]').nth(1).fill('乙'); await pg.locator('#hoPanel [data-ho-in="text"]').nth(1).fill('おつ')
+        ok(await pg.locator('#hoPreviewBox [data-ho-copy="text"]').count()==1,'T19 連続する項目ブロックのプレビューにはコピーボタンが1つだけ')
+        await pg.locator('[data-ho-act="add-split"]').click(); await pg.locator('[data-ho-act="add-item"]').click()
+        await pg.locator('#hoPanel [data-ho-in="key"]').nth(2).fill('丙'); await pg.locator('#hoPanel [data-ho-in="text"]').nth(2).fill('へい'); await pg.wait_for_timeout(200)
+        ok(await pg.locator('#hoPreviewBox [data-ho-copy="text"]').count()==2 and await pg.locator('#hoPreviewBox [data-ho-copy="all"]').count()==1 and await pg.locator('#hoPreviewBox .ho-splitline').count()==1,'T19 投稿分割があると、そこで区切ってコピーボタンが入る（まとめてコピーも出る）')
+        # 画像：ファイル選択（複数）とドラッグ＆ドロップ
+        await pg.locator('[data-ho-act="add-image"]').click(); await pg.wait_for_timeout(200)
+        await pg.locator('#hoPanel [data-ho-in="file"]').set_input_files([png.name,png2.name]); await pg.wait_for_timeout(900)
+        nimg=await pg.evaluate("secretHOs[0].blocks.filter(b=>b.type==='image'&&b.previewUrl).length"); ok(nimg==2,'T19 画像を複数選択でき、足りない分は新しいブロックになる',nimg)
+        await pg.locator('[data-ho-act="add-image"]').click(); await pg.wait_for_timeout(200)   # 空の画像ブロックへドロップ
+        r=await pg.evaluate("""async()=>{const c=document.createElement('canvas');c.width=30;c.height=30;c.getContext('2d').fillRect(0,0,30,30);const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+          const dt=new DataTransfer();dt.items.add(new File([blob],'d.png',{type:'image/png'}));const z=[...document.querySelectorAll('#hoPanel .drop-zone')].pop();const before=secretHOs[0].blocks.length;
+          z.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:dt}));await new Promise(r=>setTimeout(r,1200));
+          return {before,after:secretHOs[0].blocks.length,withImg:secretHOs[0].blocks.filter(b=>b.type==='image'&&b.previewUrl).length};}""")
+        ok(r['withImg']==3 and r['after']==r['before'],'T19 画像のドラッグ＆ドロップは1回だけ反映される（2重にならない）',r)
+        # ブロックのドラッグ並べ替え・折りたたみ・書式ボタン・自動分割
+        await pg.locator('#hoPanel [data-ho-act="toggle"] .type-badge').first.click(); await pg.wait_for_timeout(200)
+        ok(await pg.evaluate('secretHOs[0].blocks.some(b=>b.collapsed===true)'),'T19 見出しクリックで折りたたみ')
+        await pg.locator('[data-ho-act="expand-all"]').click()
+        ta=pg.locator('#hoPanel [data-ho-in="text"]').first; await ta.fill('abc'); await ta.select_text(); await pg.locator('#hoPanel [data-ho-act="fmt"]').first.click(); await pg.wait_for_timeout(200)
+        ok('**abc**' in await ta.input_value(),'T19 書式ボタン（太字）が効く')
+        await pg.evaluate("secretHOs[0].blocks.filter(b=>b.type==='item').slice(0,2).forEach((b,i)=>b.val=('あ'.repeat(1500)));renderHoPanel();renderHoPreview()")
+        await pg.locator('[data-ho-act="auto-split"]').click(); await pg.wait_for_timeout(300)
+        ok(await pg.evaluate("secretHOs[0].blocks.filter(b=>b.type==='split').length")>=2,'T19 2000文字を超える内容に、自動で分割ポイントが入る')
+        ok(not pg.errs,'T19 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T19b 項目ブロックのドラッグ＆ドロップ並べ替え（短いブロック3つで確認）
+        pg=await newpage(b,None); await pg.locator('[data-ho-act="add-ho"]').click(); await pg.locator('[data-ho-act="add-item"]').click(); await pg.locator('[data-ho-act="add-item"]').click()
+        await pg.evaluate("secretHOs[0].blocks.forEach((b,i)=>b.keyName='K'+i);renderHoPanel()")
+        tgt=pg.locator('#hoPanel [data-hb]').nth(1); hh=(await tgt.bounding_box())['height']
+        await pg.locator('#hoPanel [data-hb] .ho-handle').first.drag_to(tgt,target_position={'x':60,'y':max(hh-4,2)}); await pg.wait_for_timeout(300)
+        ok(await pg.evaluate("secretHOs[0].blocks.map(b=>b.keyName).join()")=='K1,K0,K2','T19 項目ブロックをドラッグ＆ドロップで並べ替えられる（公開情報と同じ操作）',await pg.evaluate("secretHOs[0].blocks.map(b=>b.keyName).join()"))
+        ok(not pg.errs,'T19b エラーなし',pg.errs[:2]); await pg.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())
