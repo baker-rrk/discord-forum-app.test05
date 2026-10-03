@@ -1,4 +1,4 @@
-/* app_test36_08_events.js — ブロック編集画面のイベント（インライン onclick 等の代わり）
+/* app_test38_08_events.js — ブロック編集画面のイベント（インライン onclick 等の代わり）
  * HTML側の data-ba（クリック）/ data-bi（入力）/ data-bc（変更）属性を見て、document で一括して受け取ります。
  * 各ブロックは data-bid（ブロックID）で特定し、その時点の並び順を blockIdx() で引きます。 */
 (function () {
@@ -15,6 +15,8 @@
     else if (act === 'item-add') addSummaryItem(i);
     else if (act === 'item-del') deleteSummaryItem(i, Number(el.dataset.i));
     else if (act === 'img-clear') clearImageFile(i);
+    else if (act === 'sub-add') { const b = blockOrder[i]; (b.subItems = b.subItems || []).push({ title: '', val: '', style: 'plain' }); renderBlockUI(); renderPreview(); }
+    else if (act === 'sub-del') { const b = blockOrder[i]; (b.subItems || []).splice(Number(el.dataset.i), 1); renderBlockUI(); renderPreview(); }
     else if (act === 'fmt') insertFmt(el.dataset.bid, el.dataset.fb, el.dataset.fa || '');
   });
   document.addEventListener('input', e => {
@@ -23,6 +25,7 @@
     if (k === 'key') { b.keyName = v; renderPreview(); }
     else if (k === 'item-key' && it) { it.keyName = v; renderPreview(); }
     else if (k === 'item-val' && it) { it.val = v; renderPreview(); }
+    else if (k === 'sub-title' || k === 'sub-text' || k === 'sub-style') { const s = (b.subItems || [])[Number(el.dataset.i)]; if (s) { s[k === 'sub-title' ? 'title' : k === 'sub-text' ? 'val' : 'style'] = v; renderPreview(); } }
     else if (k === 'free') { b.freeText = v; renderPreview(); }
     else if (k === 'img-url') handleImageUrlInput(i, v);
     else if (k === 'val') updateBlockValue(i, v);

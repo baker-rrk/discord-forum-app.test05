@@ -1,4 +1,4 @@
-/* app_test36_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
+/* app_test38_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function openPostStatusDialog(scId) {
@@ -159,7 +159,7 @@
   }
 
   function loadScenarioFromDB(idx) {
-    if (idx === "") return; const _k = String(idx); let _i = appState.scenarios.findIndex(s => s.id === _k); if (_i < 0 && /^\d+$/.test(_k)) _i = Number(_k); const sc = appState.scenarios[_i]; if (!sc) return; ensureScenarioBlocks(sc); currentScenarioId = sc.id || null; setTimeout(() => requestRefsIn(blockOrder), 0); 
+    if (idx === "") return; const _k = String(idx); let _i = appState.scenarios.findIndex(s => s.id === _k); if (_i < 0 && /^\d+$/.test(_k)) _i = Number(_k); const sc = appState.scenarios[_i]; if (!sc) return; ensureScenarioBlocks(sc); currentScenarioId = sc.id || null; setHOs(sc.secretHOs || []); setTimeout(() => requestRefsIn(blockOrder), 0); 
     document.getElementById('title').value = sc.title || "";
     document.getElementById('topShopUrl').value = sc.shopUrl || "";
     document.getElementById('topTrailer').value = sc.trailer || "";
@@ -202,10 +202,10 @@
       else if (b.type === 'image') { b.file = null; b.previewUrl = ''; }
       else if (b.type !== 'split') b.val = '';
     });
-    activeTagNames.clear(); updateTagCheckboxes(); renderBlockUI(); checkDuplicateStatus(); renderPreview();
+    setHOs([]); activeTagNames.clear(); updateTagCheckboxes(); renderBlockUI(); checkDuplicateStatus(); renderPreview();
   }
   async function resetForm() {
-    if (!(await appConfirm('入力中のフォームをクリアしますか？', { okText: 'クリア', danger: true }))) return; currentScenarioId = null;
+    if (!(await appConfirm('入力中のフォームをクリアしますか？', { okText: 'クリア', danger: true }))) return; currentScenarioId = null; setHOs([]);
     document.getElementById('title').value = ""; document.getElementById('autoReplyText').value = ""; document.getElementById('dbScenarioSelect').value = "";
     document.getElementById('topShopUrl').value = ""; document.getElementById('topTrailer').value = "";
     if (document.getElementById('topTrailerDecor')) document.getElementById('topTrailerDecor').value = "default";
@@ -231,6 +231,10 @@
     </select>`;
   }
 
+  function subItemsHtml(b) {   // 「＋ サブ項目を追加」で増える、サブタイトル＋本文のペア（普段は非表示で、従来どおりのシンプルなUI）
+    const rows = (b.subItems || []).map((s, i) => `<div class="sub-item"><div class="sub-item-head"><input type="text" data-bi="sub-title" data-bid="${b.id}" data-i="${i}" value="${escapeHTML(s.title)}" placeholder="サブタイトル（小見出し）"><select data-bi="sub-style" data-bid="${b.id}" data-i="${i}" title="サブタイトルの表記（引用の外に出ます）"><option value="plain" ${s.style === 'bold' ? '' : 'selected'}>通常文字</option><option value="bold" ${s.style === 'bold' ? 'selected' : ''}>太字</option></select><button type="button" class="btn-sort btn-danger" data-ba="sub-del" data-bid="${b.id}" data-i="${i}">✕ 削除</button></div><textarea data-bi="sub-text" data-bid="${b.id}" data-i="${i}" placeholder="サブ項目の本文">${escapeHTML(s.val)}</textarea></div>`).join('');
+    return `${rows}<button type="button" class="btn btn-secondary btn-sm sub-add" data-ba="sub-add" data-bid="${b.id}">＋ サブ項目を追加</button>`;
+  }
   function renderBlockUI() {
     blockOrder = blockOrder.filter(b => b && typeof b === 'object'); blockOrder.forEach(b => sanitizeBlock(b)); tagSummaryFields(blockOrder);
     blockOrder.forEach(b => { b.id = String(b.id || '').replace(/[^\w-]/g, '_') || ('b_' + uid()); });
@@ -294,6 +298,7 @@
         let badge = b.sectionType === 'standalone' ? `<span class="type-badge standalone">📑 独立</span>` : `<span class="type-badge header">🔗 基本情報</span>`;
         let valBadge = hasVal ? `<span class="type-badge has-val">🟢 入力あり</span>` : '';
         let inp = b.type === 'textarea' ? `<div class="fmt-toolbar"><button type="button" class="fmt-btn" data-ba="fmt" data-fb="**" data-fa="**" data-bid="${b.id}"><b>B</b> 太字</button><button type="button" class="fmt-btn" data-ba="fmt" data-fb="||" data-fa="||" data-bid="${b.id}">👁️ スポイラー</button><button type="button" class="fmt-btn" data-ba="fmt" data-fb="&gt; " data-fa="" data-bid="${b.id}">💬 引用</button></div><textarea id="${b.id}" data-bi="val" data-bid="${b.id}">${escapeHTML(b.val)}</textarea>` : `<input type="${b.type}" id="${b.id}" value="${escapeHTML(b.val)}" data-bi="val" data-bid="${b.id}" placeholder="${escapeHTML(b.label)}">`;
+        if (b.type === 'textarea') inp += subItemsHtml(b);
         item.innerHTML = `
           <div class="sortable-header" data-ba="toggle" data-bid="${b.id}">
             <div class="sortable-title">
@@ -345,6 +350,25 @@
   function deleteCustomBlock(idx) { revokeFileUrl(blockOrder[idx] && blockOrder[idx].file); blockOrder.splice(idx, 1); renderBlockUI(); renderPreview(); }
   function insertFmt(id, b, a = '') { const el = document.getElementById(id); if(!el) return; const s = el.selectionStart, e = el.selectionEnd, v = el.value; el.value = v.substring(0,s) + b + v.substring(s,e) + a + v.substring(e); const idx = blockOrder.findIndex(x=>x.id===id); if(idx!==-1) blockOrder[idx].val = el.value; renderPreview(); }
 
+  // 項目ブロック1つ分の出力：見出し → 本文（装飾スタイルに沿う）→ サブ項目（サブタイトル行は引用の外／通常文字か太字、本文は引用）
+  function formatItemSection(title, val, subs, style, cfg) {
+    const t = (title || '').trim(); style = style || 'default';
+    const mainLines = (val && val.trim()) ? val.split('\n') : [];
+    const subList = (subs || []).filter(s => (s.title && s.title.trim()) || (s.val && s.val.trim()));
+    if (!mainLines.length && !subList.length) return '';
+    const body = lines => {
+      if (style === 'codeblock') return '```\n' + lines.join('\n') + '\n```';
+      if (style === 'simple') return lines.map(l => l ? cfg.simpleList + l : cfg.simpleList).join('\n');
+      if (style === 'fancy') return lines.map(l => l ? cfg.fancyList + l : cfg.fancyList).join('\n');
+      if (style === 'none') return lines.join('\n');
+      return lines.map(l => l ? cfg.quote + l : cfg.quote + '\u200B').join('\n');   // 空行は見えない文字を入れて引用を途切れさせない
+    };
+    const head = !t ? '' : style === 'simple' ? cfg.simpleH1 + t : style === 'fancy' ? cfg.fancyH1 + t + cfg.fancyH1 : cfg.h1 + t;
+    const parts = [];
+    if (mainLines.length) parts.push(body(mainLines));
+    subList.forEach(s => { const st = (s.title || '').trim(), line = st ? (s.style === 'bold' ? `**${st}**` : st) : '', sb = (s.val && s.val.trim()) ? body(s.val.split('\n')) : ''; parts.push([line, sb].filter(Boolean).join('\n')); });
+    return (head ? head + '\n' : '') + parts.join('\n\n');
+  }
   function buildPostData() {
     const noImage = document.getElementById('noImageMode')?.checked;
     const cfg = appState.formatConfig || defaultFormatConfig;
@@ -410,8 +434,7 @@
         }
         return; 
       } else {
-        if (!b.val || !b.val.trim()) return;
-        b.val.split('\n').forEach(l => contentLines.push(l));
+        const sec2 = formatItemSection(blockTitle, b.val, b.subItems, b.decorStyle, cfg); if (sec2) chunks[chunkIdx].textParts.push(sec2); return;
       }
 
       if (contentLines.length > 0) {

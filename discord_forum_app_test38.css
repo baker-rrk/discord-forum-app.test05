@@ -267,3 +267,27 @@
     .fav-star { cursor: pointer; color: #80848e; margin-right: 4px; user-select: none; font-size: 1.05em; }
     .fav-star.on { color: #f0b232; } .fav-star:hover { color: #f0b232; }
     @media (max-width: 900px) { .app-header { gap: 8px; } .app-title { font-size: 1.05rem; } }   /* 小さい画面では固定ヘッダーを少し小さく */
+
+/* 秘匿HO：サブタブ・入力ブロック・DM風プレビュー／公開情報のサブ項目 */
+.ho-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ho-tab { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--dc-border); background: var(--dc-bg-primary); color: #fff; cursor: pointer; font-size: 0.85rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ho-tab.active { background: #5865f2; border-color: #5865f2; font-weight: bold; }
+.ho-tab.add { border-style: dashed; color: #b5bac1; }
+.ho-head { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ho-head input { flex: 1; font-weight: bold; }
+.ho-block { border: 1px solid var(--dc-border); border-radius: 6px; padding: 10px; margin-bottom: 10px; background: var(--dc-bg-primary); }
+.ho-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; color: #b5bac1; }
+.ho-block textarea { min-height: 120px; }
+.ho-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.ho-thumb { max-width: 100%; max-height: 180px; margin-top: 8px; border-radius: 4px; display: block; }
+.ho-copybar { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ho-copybar button { padding: 4px 10px; font-size: 0.78rem; border-radius: 4px; border: 1px solid var(--dc-border); background: #4e5058; color: #fff; cursor: pointer; }
+.ho-hint { font-size: 0.78rem; color: #b5bac1; margin-bottom: 10px; line-height: 1.6; }
+.sub-item { margin-top: 10px; padding: 8px; border-left: 3px solid #5865f2; background: rgba(255,255,255,0.03); border-radius: 4px; }
+.sub-item-head { display: flex; gap: 8px; margin-bottom: 6px; }
+.sub-item-head input { flex: 1; font-weight: bold; }
+.sub-item textarea { min-height: 70px; }
+.sub-add { margin-top: 10px; }
+.ho-count { font-size: 0.75rem; color: #b5bac1; align-self: center; } .ho-count.over { color: #f23f42; font-weight: bold; }
+.ho-copyall { margin-left: auto; padding: 3px 10px; font-size: 0.78rem; border-radius: 4px; border: 1px solid var(--dc-border); background: #4e5058; color: #fff; cursor: pointer; }
+.ho-bar select, .sub-item-head select { width: auto; }

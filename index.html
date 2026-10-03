@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Discord フォーラム概要自動投稿ツール</title>
-  <link rel="stylesheet" href="discord_forum_app_test36.css">
+  <link rel="stylesheet" href="discord_forum_app_test38.css">
 </head>
 <body>
 
@@ -77,6 +77,8 @@
         </div>
       </div>
 
+      <div id="hoTabs" class="ho-tabs" role="tablist"></div>
+      <div id="hoPanel" style="display:none"></div>
       <form id="postForm" data-on-submit="handlePost-event">
         <div class="card">
           <div class="card-title">📌 送信先チャンネル(複数選択可)</div>
@@ -175,7 +177,8 @@
     </div>
 
     <div class="preview-area">
-      <div class="discord-preview-box">
+      <div class="discord-preview-box" id="hoPreviewBox" style="display:none"></div>
+      <div class="discord-preview-box" id="pubPreviewBox">
         <div class="discord-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;"><span>👀 リアルタイム Discord プレビュー</span><button type="button" id="copyPostBtn" class="btn btn-secondary btn-xs" data-on-click="copyPostContent">📋 投稿内容をコピー</button></div>
         
         <div class="discord-thread-title" id="pvThreadTitle">【スレッドタイトル】</div>
@@ -444,15 +447,16 @@
   </div>
 </div>
 
-<script src="app_test36_01_state_model.js"></script>
-<script src="app_test36_02_storage_images.js"></script>
-<script src="app_test36_03_ui_basics.js"></script>
-<script src="app_test36_04_forms_blocks.js"></script>
-<script src="app_test36_05_channels_save_sync.js"></script>
-<script src="app_test36_06_post.js"></script>
-<script src="app_test36_07_boot.js"></script>
-<script src="app_test36_08_events.js"></script>
-<script src="app_test36_09_actions.js"></script>
+<script src="app_test38_01_state_model.js"></script>
+<script src="app_test38_02_storage_images.js"></script>
+<script src="app_test38_03_ui_basics.js"></script>
+<script src="app_test38_04_forms_blocks.js"></script>
+<script src="app_test38_05_channels_save_sync.js"></script>
+<script src="app_test38_06_post.js"></script>
+<script src="app_test38_07_boot.js"></script>
+<script src="app_test38_08_events.js"></script>
+<script src="app_test38_09_actions.js"></script>
+<script src="app_test38_10_secret_ho.js"></script>
 
 
 <script type="module">

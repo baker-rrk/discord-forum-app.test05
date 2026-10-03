@@ -1,7 +1,7 @@
 // 開発用の自動テスト（本番には不要・配布不要）。使い方: node dev_tests.js [HTMLとJSがあるフォルダ]
 const fs = require('fs'), path = require('path'); const DIR = process.argv[2] || '.';
-const HTML = path.join(DIR, fs.readdirSync(DIR).filter(f => /^discord_forum_app_test\d+\.html$/.test(f)).sort((a, b) => parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0])).pop());
-const V = HTML.match(/test(\d+)\.html/)[1];
+const HTML = path.join(DIR, 'index.html');   // 分割版のHTMLは index.html
+const V = fs.readFileSync(HTML, 'utf8').match(/app_test(\d+)_/)[1];
 const loadApp = () => fs.readdirSync(DIR).filter(f => new RegExp('^app_test' + V + '_\\d+_.*\\.js$').test(f)).sort().map(f => fs.readFileSync(path.join(DIR, f), 'utf8')).join('');
 {
 const fs=require('fs'); const src=loadApp();
@@ -126,7 +126,7 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   console.log((/function handleContainerDrop\(e\) \{[^\n]*data-ba="pick"/.test(app)?'OK  ':'NG  ')+'画像ブロック上のドロップはコンテナ側で無視');
   const a=app.indexOf('async function resetInputs'), fn=app.slice(a,app.indexOf('\n  }\n',a)+5);
   const els={title:{value:'t'},autoReplyText:{value:'a'},topShopUrl:{value:'s'},topTrailer:{value:'r'},dbScenarioSelect:{value:'x'}};
-  const env={ appConfirm:async()=>true, currentScenarioId:'id1', document:{getElementById:i=>els[i]}, activeTagNames:new Set(['a']), updateTagCheckboxes(){}, renderBlockUI(){}, checkDuplicateStatus(){}, renderPreview(){},
+  const env={ appConfirm:async()=>true, currentScenarioId:'id1', document:{getElementById:i=>els[i]}, activeTagNames:new Set(['a']), updateTagCheckboxes(){}, setHOs(){}, renderBlockUI(){}, checkDuplicateStatus(){}, renderPreview(){},
     blockOrder:[{id:'s',type:'summary_container',items:[{keyName:'システム',val:'CoC'}],freeText:'f'},{id:'n',type:'textarea',val:'memo',label:'備考'},{id:'sp',type:'split'},{id:'i',type:'image',previewUrl:'u',file:{}}] };
   const bo=env.blockOrder, order=bo.map(b=>b.id).join();
   new Function(...Object.keys(env),fn+';return resetInputs;')(...Object.values(env))().then(()=>{});
@@ -196,4 +196,27 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   console.log((!/FLAT_MAP|setBlockVal/.test(lfb)&&/ensureScenarioBlocks\(sc\)/.test(lfb)?'OK  ':'NG  ')+'シナリオ呼び出しに旧データ用の分岐が残っていない');
   const vals=[...html.matchAll(/data-on-(?:click|input|change|submit|dragover|dragleave|drop)="([^"]*)"/g)].map(m=>m[1]);
   console.log((vals.length>0&&vals.every(v=>/^[A-Za-z][\w-]{0,44}$/.test(v))?'OK  ':'NG  ')+'処理の登録名はすべて短い名前（'+new Set(vals).size+'種）');
+}
+
+{ // 秘匿HOの出力形式（指定のイメージどおりか）・サブ項目・データ整形
+  const app=loadApp(), grab=(re)=>app.match(re)[0];
+  const fnText=n=>{const a=app.indexOf('function '+n);return app.slice(a,app.indexOf('\n  }\n',a)+5).replace(/^\n/,'');};
+  const cfgSrc=grab(/const defaultFormatConfig = \{[\s\S]*?\n\s*\};/);
+  const env=new Function('_s','DECOR_STYLES',cfgSrc+'\n'+fnText('formatItemSection')+'\n'+grab(/const hoHeading = [^\n]*/)+'\n'+grab(/const sanitizeSubs = [^\n]*/)+'\n'+grab(/function sanitizeHOs[\s\S]*?\n\}\n/)+'\n'+grab(/function hoMessages[\s\S]*?\n\}\n/)+'\nreturn {defaultFormatConfig,formatItemSection,hoHeading,hoMessages,sanitizeHOs};')(v=>v==null?'':String(v),['default','simple','fancy','codeblock','none']);
+  const fmt=env.formatItemSection, cfg=env.defaultFormatConfig; globalThis.defaultFormatConfig=cfg; globalThis.appState={formatConfig:cfg}; globalThis.hoId=()=>'g';
+  const e=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
+  e(cfg.h1==='## ❚ '&&cfg.quote==='> ','見出し「## ❚ 」と引用「> 」の記号が、指定のイメージと一致');
+  e(fmt('PC 作成','年齢：10 代後半～20 代前半推奨',[],'default',cfg)==='## ❚ PC 作成\n> 年齢：10 代後半～20 代前半推奨','項目ブロック：見出し＋引用の本文');
+  const npc=fmt('NPC 情報','',[{title:'雨月（うげつ）',val:'あなたの血の繋がった兄。男性。22 歳。\n優しく、おしとやかな性格。心理学について学んでいた。',style:'plain'}],'default',cfg);
+  e(npc==='## ❚ NPC 情報\n雨月（うげつ）\n> あなたの血の繋がった兄。男性。22 歳。\n> 優しく、おしとやかな性格。心理学について学んでいた。','サブ項目：サブタイトルは引用の外（通常文字）、本文は引用（NPC情報のイメージどおり）');
+  e(fmt('NPC 情報','',[{title:'雨月',val:'兄',style:'bold'}],'default',cfg)==='## ❚ NPC 情報\n**雨月**\n> 兄','サブタイトルを太字にもできる');
+  e(fmt('武器','基本の説明',[{title:'日本刀',val:'切れ味',style:'plain'},{title:'弓',val:'射程',style:'bold'}],'default',cfg)==='## ❚ 武器\n> 基本の説明\n\n日本刀\n> 切れ味\n\n**弓**\n> 射程','本文＋複数のサブ項目（空行で区切る）');
+  e(fmt('','本文のみ',[],'default',cfg)==='> 本文のみ'&&fmt('A','',[],'default',cfg)===''&&fmt('A','x',[],'codeblock',cfg)==='## ❚ A\n```\nx\n```','サブ項目なしは従来どおり（見出しなし／空は出力なし／コードブロック）');
+  e(env.hoHeading({name:'HO2',tagline:'あなたは急遽、鬼狩部隊に入隊した。'})==='# HO2：__あなたは急遽、鬼狩部隊に入隊した。__'&&env.hoHeading({name:'HO2',tagline:'  '})==='','HOの1行目は「# HO名：__導入文__」、導入文が空なら見出し行なし');
+  const ms=env.hoMessages({name:'HO2',tagline:'導入',blocks:[{type:'item',keyName:'PC 作成',val:'年齢',decorStyle:'default',subItems:[]},{type:'image',previewUrl:'u',id:'i'},{type:'item',keyName:'過去',val:'兄',decorStyle:'default',subItems:[]}]});
+  e(ms.length===3&&ms[0].text==='# HO2：__導入__\n\n\n## ❚ PC 作成\n> 年齢'&&ms[1].kind==='image'&&ms[2].text==='## ❚ 過去\n> 兄','DM用の出力：見出しは最初のテキストにまとまり、画像を間に挟める');
+  const none=env.hoMessages({name:'HO2',tagline:'',blocks:[{type:'item',keyName:'PC 作成',val:'年齢',decorStyle:'default',subItems:[]}]});
+  e(none[0].text==='## ❚ PC 作成\n> 年齢','導入文が空なら、1行目の見出しは出力されない');
+  const r=env.sanitizeHOs([{name:5,blocks:[{type:'image',previewUrl:null},{type:'text',val:3},{type:'item',keyName:7,decorStyle:'x',subItems:[null,{title:1,style:'zzz'}]},null]},'bad',null]);
+  e(r.length===1&&r[0].name==='5'&&r[0].blocks.length===3&&r[0].blocks[0].previewUrl===''&&r[0].blocks[1].type==='item'&&r[0].blocks[1].val==='3'&&r[0].blocks[2].decorStyle==='default'&&r[0].blocks[2].subItems.length===1&&r[0].blocks[2].subItems[0].style==='plain','HOデータの整形（旧形式のテキストブロックは項目ブロックへ変換・不正な値は安全な形に）');
 }

@@ -1,4 +1,4 @@
-/* app_test36_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
+/* app_test38_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   let _dlgChain = Promise.resolve();
@@ -215,7 +215,7 @@ function autoSyncToDBOnPost(title, targetChannelIds, opts) {
       reqSkills: getSumValFromBlock('必須技能'), recSkills: getSumValFromBlock('推奨技能'), semiRecSkills: getSumValFromBlock('準推奨技能'),
       lostRate: getSumValFromBlock('ロスト率'), aftereffect: getSumValFromBlock('後遺症'), notes: getBlockVal('notes'),
       postedChannels: prev ? [...(prev.postedChannels || [])] : [], postedInfo: prev ? JSON.parse(JSON.stringify(prev.postedInfo || {})) : {},
-      tags: [...activeTagNames], autoReply: document.getElementById('autoReplyText').value, fullBlockData
+      tags: [...activeTagNames], autoReply: document.getElementById('autoReplyText').value, secretHOs: cloneHOs(), fullBlockData
     });
     deriveFlat(scData);   // フラット項目はブロックから作り直す（二重管理をここで一本化）
     targetChannelIds.forEach(id => { const c = chById(id); setPosted(scData, id, true, c ? tagsForChannel(c) : []); });

@@ -1,11 +1,11 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test36.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test38.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
 DIR=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else '.').resolve()   # HTML/CSS/JSのあるフォルダ（最新バージョンのHTMLを自動で選ぶ）
-_h=sorted(glob.glob(str(DIR/'discord_forum_app_test*.html')),key=lambda p:int(re.search(r'test(\d+)',p).group(1)))[-1]; URL=pathlib.Path(_h).as_uri()
+_h=str(DIR/'index.html'); URL=pathlib.Path(_h).as_uri()   # 分割版のHTMLは index.html
 LAUNCH={'args':['--no-sandbox']}
 if os.environ.get('CHROME_PATH'): LAUNCH['executable_path']=os.environ['CHROME_PATH']   # 既存のChromeを使う場合に指定
 res=[]; 
@@ -175,6 +175,62 @@ async def main():
             if await pg.locator('button:visible',has_text=name).count(): await pg.locator('button:visible',has_text=name).last.click(); break
         await pg.wait_for_timeout(400); ok(await pg.input_value('#title')=='' ,'T16 フォーム初期化でタイトルが空に戻る')
         ok(not pg.errs,'T14-16 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T17 秘匿HO：サブタブ・項目ブロック・見出し行・DM風プレビュー・保存と呼び出し
+        import base64,tempfile
+        png=tempfile.NamedTemporaryFile(suffix='.png',delete=False); png.write(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==')); png.close()
+        pg=await newpage(b,None)
+        ok(await pg.locator('.ho-tab').count()==2 and 'フォーラム公開情報' in await pg.locator('.ho-tab').first.inner_text(),'T17 サブタブは [🌐公開情報]（既定）と [＋HO追加] の2つから始まる')
+        await pg.locator('[data-ho-act="add-ho"]').click(); await pg.wait_for_timeout(300)
+        ok(await pg.locator('.ho-tab').count()==3 and await pg.locator('.ho-tab.active').inner_text()=='🔒 HO1','T17 ＋HO追加で [🔒 HO1] が増えて開く')
+        ok(await pg.locator('#hoPanel [data-ho-in="key"]').count()==1 and await pg.locator('#hoPanel [data-ho-in="text"]').count()==1,'T17 追加直後は項目ブロック（項目名＋本文）が1つ')
+        ok(not await pg.locator('#postForm').is_visible() and await pg.locator('#hoPreviewBox').is_visible() and not await pg.locator('#pubPreviewBox').is_visible(),'T17 HOタブ中は入力欄・プレビューがHO用に切り替わる')
+        await pg.locator('#hoPanel [data-ho-in="name"]').fill('HO2'); ok(await pg.locator('.ho-tab.active').inner_text()=='🔒 HO2','T17 HO名がタブ名にすぐ反映される')
+        await pg.locator('#hoPanel [data-ho-in="key"]').fill('PC 作成'); await pg.locator('#hoPanel [data-ho-in="text"]').fill('年齢：10 代後半～20 代前半推奨')
+        await pg.locator('[data-ho-act="add-item"]').click(); await pg.locator('[data-ho-act="add-image"]').click(); await pg.wait_for_timeout(200)
+        await pg.locator('#hoPanel [data-ho-in="key"]').nth(1).fill('NPC 情報')
+        await pg.locator('[data-ho-act="sub-add"]').nth(1).click(); await pg.wait_for_timeout(200)
+        await pg.locator('#hoPanel [data-ho-in="sub-title"]').fill('雨月（うげつ）'); await pg.locator('#hoPanel [data-ho-in="sub-text"]').fill('あなたの血の繋がった兄。\n優しい性格。')
+        await pg.locator('#hoPanel [data-ho-in="file"]').set_input_files(png.name); await pg.wait_for_timeout(800)
+        await pg.locator('#hoPanel [data-ho-in="tagline"]').fill('あなたは急遽、鬼狩部隊に入隊した。'); await pg.wait_for_timeout(300)
+        msgs=await pg.evaluate('hoMessages(secretHOs[0]).map(m=>m.kind==="text"?m.text:"[image]")')
+        ok(msgs[0]=='# HO2：__あなたは急遽、鬼狩部隊に入隊した。__\n\n\n## ❚ PC 作成\n> 年齢：10 代後半～20 代前半推奨','T17 1行目は「# HO2：__導入文__」の見出し行＋項目ブロック',msgs[0])
+        ok(msgs[1]=='## ❚ NPC 情報\n雨月（うげつ）\n> あなたの血の繋がった兄。\n> 優しい性格。' and msgs[2]=='[image]','T17 サブ項目のタイトルは引用の外、本文は引用。画像は間に挟める',msgs[1:])
+        ok(await pg.locator('#hoPreviewBox [data-ho-copy="text"]').count()==2 and await pg.locator('#hoPreviewBox [data-ho-copy="img"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="dl"]').count()==1 and await pg.locator('#hoPreviewBox [data-ho-copy="all"]').count()==1,'T17 プレビューにメッセージごとのコピー／ダウンロードと「まとめてコピー」が並ぶ')
+        ok(await pg.locator('#hoPanel [data-ho-copy]').count()==0,'T17 入力欄側にはコピーボタンがない')
+        await pg.locator('#hoPreviewBox [data-ho-copy="text"]').first.click(); await pg.wait_for_timeout(300)
+        ok('コピー' in (await pg.inner_text('#toast-box')),'T17 テキストのコピーボタンが動く')
+        await pg.locator('#hoPanel [data-ho-in="sub-style"]').select_option('bold'); await pg.wait_for_timeout(200)
+        ok('**雨月（うげつ）**' in (await pg.evaluate('hoMessages(secretHOs[0])[1].text')),'T17 サブタイトルを太字に切り替えられる')
+        await pg.locator('#hoPanel [data-ho-in="tagline"]').fill(''); await pg.wait_for_timeout(200)
+        ok((await pg.evaluate('hoMessages(secretHOs[0])[0].text')).startswith('## ❚ PC 作成'),'T17 導入文が空なら見出し行は出力されない')
+        await pg.locator('#hoPanel [data-ho-in="tagline"]').fill('導入'); await pg.locator('[data-ho-act="down"]').first.click()
+        ok(await pg.evaluate('secretHOs[0].blocks[1].keyName')=='PC 作成','T17 ブロックを▼で並び替えできる')
+        await pg.locator('[data-ho-act="tab"][data-hi="-1"]').click(); await pg.fill('#title','HO付きシナリオ'); await pg.locator('button[data-on-click="saveCurrentToDB"]').click(); await pg.wait_for_timeout(500)
+        ok(await pg.evaluate("(appState.scenarios.find(s=>s.title==='HO付きシナリオ')||{}).secretHOs?.[0]?.blocks.length")==3 and await pg.locator('#postForm').is_visible(),'T17 シナリオ保存で secretHOs が保存され、公開情報タブへ戻れる')
+        await pg.locator('button[data-on-click="resetInputs"]').click(); await click_btn(pg,'クリア'); await pg.wait_for_timeout(300)
+        ok(await pg.locator('.ho-tab').count()==2,'T17 入力内容のみクリアでHOタブも空になる')
+        sid=await pg.evaluate("appState.scenarios.find(s=>s.title==='HO付きシナリオ').id"); await pg.select_option('#dbScenarioSelect',sid); await pg.wait_for_timeout(500)
+        ok(await pg.locator('.ho-tab').count()==3 and 'HO2' in await pg.locator('.ho-tab').nth(1).inner_text() and await pg.evaluate('secretHOs[0].tagline')=='導入','T17 シナリオを呼び出すとHOタブ（導入文つき）が復元される')
+        await pg.locator('.ho-tab').nth(1).click(); await pg.locator('[data-ho-act="del-ho"]').click(); await click_btn(pg,'削除'); await pg.wait_for_timeout(300)
+        ok(await pg.locator('.ho-tab').count()==2,'T17 HOを削除できる'); ok(not pg.errs,'T17 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T18 公開情報のサブ項目
+        pg=await newpage(b,None)
+        await pg.evaluate("blockOrder.find(b=>b.id==='intro').collapsed=false;renderBlockUI()"); await pg.fill('#intro','概要の本文')
+        ok(await pg.locator('[data-ba="sub-add"][data-bid="intro"]').count()==1 and await pg.locator('[data-bi="sub-title"]').count()==0,'T18 通常は従来どおり。「＋ サブ項目を追加」ボタンだけがある')
+        before=await pg.evaluate("buildPostData()[0].text")
+        await pg.locator('[data-ba="sub-add"][data-bid="intro"]').click(); await pg.wait_for_timeout(200)
+        await pg.locator('[data-bi="sub-title"]').first.fill('NPC田中'); await pg.locator('[data-bi="sub-text"]').first.fill('年齢: 40\n職業: 医師'); await pg.wait_for_timeout(300)
+        lines=(await pg.evaluate("buildPostData()[0].text")).split('\n')
+        ok('NPC田中' in lines and '> 年齢: 40' in lines and '> 概要の本文' in lines,'T18 サブタイトルは引用の外（通常文字）、本文は引用で出力される',lines)
+        await pg.locator('[data-bi="sub-style"]').first.select_option('bold'); await pg.wait_for_timeout(200)
+        ok('**NPC田中**' in (await pg.evaluate("buildPostData()[0].text")).split('\n'),'T18 サブタイトルを太字に切り替えられる')
+        ok('NPC田中' in await pg.inner_text('#pvContent'),'T18 プレビューにサブ項目が反映される')
+        ok('**' not in before and '> 概要の本文' in before,'T18 サブ項目が無いブロックの出力は従来どおり')
+        await pg.fill('#title','サブ項目シナリオ'); await pg.locator('button[data-on-click="saveCurrentToDB"]').click(); await pg.wait_for_timeout(500)
+        ok(await pg.evaluate("appState.scenarios.find(s=>s.title==='サブ項目シナリオ').fullBlockData.find(b=>b.id==='intro').subItems[0].style")=='bold','T18 サブ項目（表記つき）がシナリオDBに保存される')
+        await pg.locator('[data-ba="sub-del"]').first.click(); await pg.wait_for_timeout(200)
+        ok(await pg.evaluate("blockOrder.find(b=>b.id==='intro').subItems.length")==0 and '**' not in await pg.evaluate("buildPostData()[0].text"),'T18 サブ項目を削除できる')
+        ok(not pg.errs,'T18 エラーなし',pg.errs[:2]); await pg.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

@@ -1,4 +1,4 @@
-/* app_test36_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
+/* app_test38_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
 /* Discord フォーラム概要自動投稿ツール — メインスクリプト（discord_forum_app_test24.html から読み込み）
@@ -105,7 +105,7 @@ console.info('Discord forum tool', APP_VERSION);
       b.items = (Array.isArray(b.items) ? b.items : []).filter(i => i && typeof i === 'object').map(i => ({ keyName: _s(i.keyName), val: _s(i.val), ...(FLAT_FIELDS.includes(i.field) ? { field: i.field } : {}) }));
       b.freeText = _s(b.freeText);
     } else if (b.type === 'image') { b.previewUrl = _s(b.previewUrl); }
-    else if (b.type !== 'split') b.val = _s(b.val);
+    else if (b.type !== 'split') { b.val = _s(b.val); if (Array.isArray(b.subItems)) b.subItems = b.subItems.filter(o => o && typeof o === 'object').map(o => ({ title: _s(o.title), val: _s(o.val), style: o.style === 'bold' ? 'bold' : 'plain' })); }
     return b;
   }
   const sanitizeBlocks = arr => (Array.isArray(arr) ? arr : []).map(sanitizeBlock).filter(Boolean);
@@ -117,7 +117,7 @@ console.info('Discord forum tool', APP_VERSION);
       const out = { ...x };
       ['id', 'title', 'system', 'playerCount', 'playTime', 'shopUrl', 'imageUrl', 'reqSkills', 'recSkills', 'semiRecSkills', 'lostRate', 'aftereffect', 'trailer', 'notes', 'autoReply']
         .forEach(k => { if (k === 'title' || k in out) out[k] = _s(out[k]); });
-      out.tags = (Array.isArray(x.tags) ? x.tags : []).map(_s);
+      out.tags = (Array.isArray(x.tags) ? x.tags : []).map(_s); if (Array.isArray(x.secretHOs)) out.secretHOs = sanitizeHOs(x.secretHOs);
       out.postedChannels = (Array.isArray(x.postedChannels) ? x.postedChannels : []).map(_s);
       if (Array.isArray(x.fullBlockData)) out.fullBlockData = sanitizeBlocks(x.fullBlockData);
       return out;
