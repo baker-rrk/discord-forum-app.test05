@@ -1,4 +1,4 @@
-/* app_test40_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
+/* app_test41_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function addChannelConfig() { appState.channels.push({ id: uid(), name: "新しいチャンネル", webhookUrl: "", tags: [] }); renderChannelConfigList(); saveState(); }
@@ -70,19 +70,19 @@
   function saveStateNow() {
     if (appState.history && appState.history.length > 500) appState.history = appState.history.slice(-500);
     (() => { const rest = serializeState({ ...appState, scenarios: [] }); if (scJsonCache === null) { stampScenarios(); scJsonCache = serializeState(appState.scenarios); } const json = rest.replace('"scenarios":[]', () => '"scenarios":' + scJsonCache); return persistChain.then(() => window.idbSetRaw('state', json)); })()
-      .then(() => { try { localStorage.removeItem('discord_forum_tool_data_v1'); } catch (e) { logSoft('localStorage.removeItem(discord_forum_tool_d', e); } }) // 旧保存先を整理
+      .then(() => { try { localStorage.removeItem('discord_forum_tool_data_v1'); } catch (e) { logSoft('saveStateNow', e); } }) // 旧保存先を整理
       .catch((e) => {
         console.error(e);
         if (!localSaveWarned) { localSaveWarned = true; toast("⚠️ この端末への保存に失敗しました。ブラウザの空き容量を確認し、「エクスポート」でバックアップを取ってください。"); }
       });
-    try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (e) { logSoft('localStorage.setItem(discord_forum_tool_dirt', e); } // クラウド未反映の目印
+    try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (e) { logSoft('saveStateNow', e); } // クラウド未反映の目印
     if (window.cloudScheduleSave) window.cloudScheduleSave();
   }
   window.getAppStateForSync = () => JSON.parse(serializeState(appState));
   // シナリオの内容が変わったときだけ updatedAt を更新する（別端末との統合で「新しい方」を決めるため）
   let clockOffset = Number(localStorage.getItem('cloud_clock_offset') || 0) || 0;   // サーバー時刻との差(ms)。端末の時計がずれていても「新しい方」を取り違えない
   const nowTs = () => Date.now() + clockOffset;
-  window.setClockOffset = ms => { clockOffset = ms; try { localStorage.setItem('cloud_clock_offset', String(ms)); } catch (e) { logSoft('localStorage.setItem(cloud_clock_offset, St', e); } };
+  window.setClockOffset = ms => { clockOffset = ms; try { localStorage.setItem('cloud_clock_offset', String(ms)); } catch (e) { logSoft('saveStateNow', e); } };
   const scSigs = new Map();
   const sigOf = sc => JSON.stringify(sc, (k, v) => k === 'updatedAt' ? undefined : (typeof v === 'string' ? (v.startsWith('blob:') ? '@img:' + (imgUrlToHash.get(v) || v) : v.startsWith('data:image/') ? 'data:' + v.length + v.slice(-24) : v) : v));
   function primeScenarioSigs() { scSigs.clear(); appState.scenarios.forEach(sc => { if (sc && sc.id) scSigs.set(sc.id, sigOf(sc)); }); }
@@ -117,7 +117,7 @@
       try {
         const parsed = sanitizeImported(JSON.parse(evt.target.result));
         if (parsed) {
-                    (async () => { e.target.value = ''; if (!(await appConfirm('現在のデータをこのファイルの内容で置き換えます（現在のデータはバックアップとして残ります）。', { okText: '置き換える', danger: true }))) return; const old = await window.idbGetRaw('state'); if (old) await window.idbSetRaw('state_backup', old); await window.idbSetRaw('state', JSON.stringify(parsed)); try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (e) { logSoft('localStorage.setItem(discord_forum_tool_dirt', e); } toast("✅ 設定データを復元しました。"); setTimeout(() => location.reload(), 1200); })();
+                    (async () => { e.target.value = ''; if (!(await appConfirm('現在のデータをこのファイルの内容で置き換えます（現在のデータはバックアップとして残ります）。', { okText: '置き換える', danger: true }))) return; const old = await window.idbGetRaw('state'); if (old) await window.idbSetRaw('state_backup', old); await window.idbSetRaw('state', JSON.stringify(parsed)); try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (e) { logSoft('importData', e); } toast("✅ 設定データを復元しました。"); setTimeout(() => location.reload(), 1200); })();
         } else toast("❌ ファイルの形式が異なります。");
       } catch (err) { toast("❌ エラー: 読み込めませんでした"); }
     };

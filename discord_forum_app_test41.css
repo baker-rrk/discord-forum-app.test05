@@ -306,3 +306,10 @@ input, textarea, select, button { font-family: inherit; }
 .preview-tools { display: flex; justify-content: flex-end; margin-bottom: 6px; } .preview-tools button { padding: 4px 12px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--dc-border); background: #4e5058; color: #fff; cursor: pointer; }
 .preview-area.zoomed { position: fixed; inset: 12px; z-index: 900; overflow: auto; background: var(--dc-bg-tertiary); padding: 16px; border-radius: 10px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.65); }
 .preview-area.zoomed .discord-preview-box { position: static; max-width: 920px; margin: 0 auto; zoom: 1.25; }
+@media (max-width: 600px) {   /* 狭い画面：固定ヘッダーが画面を占めすぎないよう、ボタンを1行にして横スクロールにする */
+  .app-header { flex-direction: column; align-items: stretch; gap: 4px; padding-top: 4px; padding-bottom: 6px; margin-bottom: 8px; }
+  .app-title { font-size: 0.95rem; }
+  .app-actions { flex-wrap: nowrap !important; overflow-x: auto; gap: 6px !important; padding-bottom: 2px; }
+  .app-actions .btn { white-space: nowrap; padding: 4px 8px !important; font-size: 0.78rem !important; flex: 0 0 auto; }
+  #login-status, #sync-status { font-size: 0.72rem !important; white-space: nowrap; }
+}

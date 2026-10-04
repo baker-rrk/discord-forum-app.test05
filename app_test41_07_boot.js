@@ -1,4 +1,4 @@
-/* app_test40_07_boot.js — 起動処理
+/* app_test41_07_boot.js — 起動処理
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   // ===== 投稿作成タブ：検索してシナリオを呼び出す（↑↓で選択・Enterで呼出・Escで閉じる） =====
@@ -28,4 +28,4 @@
     box.addEventListener('mousedown', e => { const it = e.target.closest('.qs-item'); if (it) { e.preventDefault(); pick(Number(it.dataset.i)); } });
     document.addEventListener('mousedown', e => { if (!box.contains(e.target) && e.target !== inp) close(); });
   })();
-  try { const fc = document.getElementById('dbFavFirst'); if (fc) fc.checked = localStorage.getItem('discord_forum_tool_db_favfirst') !== '0'; } catch (e) { logSoft('const fc = document.getElementById(dbFavFirs', e); }
+  try { const fc = document.getElementById('dbFavFirst'); if (fc) fc.checked = localStorage.getItem('discord_forum_tool_db_favfirst') !== '0'; } catch (e) { logSoft('misc', e); }

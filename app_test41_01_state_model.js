@@ -1,4 +1,4 @@
-/* app_test40_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
+/* app_test41_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
 /* Discord フォーラム概要自動投稿ツール — メインスクリプト（discord_forum_app_test24.html から読み込み）
@@ -19,7 +19,7 @@ console.info('Discord forum tool', APP_VERSION);
     if (/^Script error\.?$|ResizeObserver/.test(msg)) return;   // 外部スクリプト由来・無害な通知は無視
     console.error('[' + label + ']', e);
     const now = Date.now(); if (now - last < 3000) return; last = now;
-    try { toast('❌ 予期しないエラー: ' + msg + '\n入力中の下書きは自動保存されています。続く場合はJSONバックアップを取って再読み込みしてください'); } catch (x) { logSoft('toast(❌ 予期しないエラー:  + msg + n入力中の下書きは自動保存さ', x); }
+    try { toast('❌ 予期しないエラー: ' + msg + '\n入力中の下書きは自動保存されています。続く場合はJSONバックアップを取って再読み込みしてください'); } catch (x) { logSoft('saveMaxAttach', x); }
   };
   window.addEventListener('error', ev => report('error', ev.error || ev.message));
   window.addEventListener('unhandledrejection', ev => report('promise', ev.reason));
@@ -214,7 +214,7 @@ console.info('Discord forum tool', APP_VERSION);
   function safeUrl(u) { return /^https?:\/\//i.test(String(u || '').trim()) ? String(u).trim() : ''; }
   function fmtDate(v) { const d = new Date(v); return isNaN(d) ? String(v) : d.toLocaleString(); }
   const _fu = new WeakMap();
-  function revokeFileUrl(f) { if (f && _fu.has(f)) { try { URL.revokeObjectURL(_fu.get(f)); } catch (e) { logSoft('URL.revokeObjectURL(_fu.get(f)); }', e); } _fu.delete(f); } }
+  function revokeFileUrl(f) { if (f && _fu.has(f)) { try { URL.revokeObjectURL(_fu.get(f)); } catch (e) { logSoft('revokeFileUrl', e); } _fu.delete(f); } }
   function fileUrl(f) { if (!_fu.has(f)) _fu.set(f, URL.createObjectURL(f)); return _fu.get(f); }
   async function fetchRetry(url, opts, tries = 3, timeoutMs = 60000) {
     for (let t = 0; ; t++) {
@@ -225,7 +225,7 @@ console.info('Discord forum tool', APP_VERSION);
       finally { if (timer) clearTimeout(timer); }
       if (res.status === 429 && t < tries) {
         let wait = 2000;
-        try { const j = await res.clone().json(); wait = Math.ceil((j.retry_after || 2) * 1000) + 200; } catch (e) { logSoft('const j = await res.clone().json(); wait = Ma', e); }
+        try { const j = await res.clone().json(); wait = Math.ceil((j.retry_after || 2) * 1000) + 200; } catch (e) { logSoft('fetchRetry', e); }
         await new Promise(r => setTimeout(r, wait)); continue;
       }
       return res;
@@ -241,9 +241,9 @@ console.info('Discord forum tool', APP_VERSION);
         vertical: document.getElementById('verticalImageMode').checked, noImage: document.getElementById('noImageMode').checked,
         blocks: blockOrder.map(b => ({ ...b, file: null })),
         channelIds: selectedChannelIds(),
-        tags: [...activeTagNames], scenarioId: currentScenarioId };
+        tags: [...activeTagNames], scenarioId: currentScenarioId, secretHOs: typeof secretHOs !== 'undefined' ? secretHOs : [] };
       window.idbSetRaw('draft', serializeState(d)).catch(e => logSoft('async', e));
-    } catch (e) { logSoft('const g = id => { const e = document.getEleme', e); }
+    } catch (e) { logSoft('saveDraft', e); }
   }
   async function restoreDraft() {
     try {
@@ -254,6 +254,7 @@ console.info('Discord forum tool', APP_VERSION);
       if (Array.isArray(d.blocks) && d.blocks.length) { const nb = sanitizeBlocks(d.blocks); if (nb.length) blockOrder = nb; }
       selectedChannelCols = new Set(appState.channels.filter(c => d.channelIds ? d.channelIds.includes(c.id) : (d.channels || []).includes(c.name)).map(c => c.id));
       activeTagNames = new Set(d.tags || []); currentScenarioId = d.scenarioId || null;
+      if (Array.isArray(d.secretHOs) && d.secretHOs.length) { secretHOs = sanitizeHOs(d.secretHOs); renderHoAll(); }   // 作業中のHO
     } catch (e) { console.error(e); }
   }
 

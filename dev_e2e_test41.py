@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test40.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test41.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -302,6 +302,23 @@ async def main():
           return {over,after:pn.classList.contains('ho-filedrag')};}""")
         ok(r['over']['panel'] and r['over']['zone'] and 'ドロップ' in r['over']['label'] and not r['after'],'T20 画像をドラッグ中はHOの入力欄と画像枠に枠・案内が出て、離れると消える',r)
         ok(not pg.errs,'T20 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T21 ブロックIDの安全化・HOの下書き（画像は参照）・狭い画面のヘッダー
+        pg=await newpage(b,None)
+        r=await pg.evaluate("""()=>{secretHOs=sanitizeHOs([{name:'x',tagline:'',blocks:[{id:'a" data-x="1" onmouseover="window.__pwn=1" q="',type:'item',keyName:'k',val:'v'}]}]);activeHO=0;renderHoPanel();
+          const el=document.querySelector('#hoPanel [data-hb]');return {attrs:[...el.attributes].map(a=>a.name).join(','),pwn:window.__pwn===undefined}}""")
+        ok(r['attrs']=='class,data-hb' and r['pwn'],'T21 細工されたブロックIDでも、HTMLに余計な属性（onmouseover等）が入らない',r)
+        await pg.evaluate("setHOs([])"); await pg.locator('[data-ho-act="add-ho"]').click(); await pg.locator('#hoPanel [data-ho-in="name"]').fill('HO復元')
+        await pg.locator('[data-ho-act="add-image"]').click(); await pg.locator('#hoPanel [data-ho-in="file"]').set_input_files(png.name); await pg.wait_for_timeout(1800)
+        raw=await pg.evaluate("window.idbGetRaw('draft')")
+        ok(raw and 'secretHOs' in raw and 'data:image' not in raw and '@img:' in raw,'T21 HOの下書きは公開情報の下書きに含まれ、画像は参照で保存される（画像データを丸ごと書き込まない）')
+        await pg.reload(); await pg.wait_for_timeout(2200)
+        ok(await pg.evaluate('secretHOs.length')==1 and await pg.evaluate('secretHOs[0].name')=='HO復元' and await pg.locator('.ho-tab').count()==3,'T21 再読み込み後も、作業中のHOが復元される')
+        ok(await pg.evaluate("secretHOs[0].blocks.some(b=>b.type==='image'&&b.previewUrl)"),'T21 HOの画像も復元される')
+        ok(not pg.errs,'T21 エラーなし',pg.errs[:2]); await pg.context.close()
+        ctx=await b.new_context(viewport={'width':390,'height':844}); pg=await ctx.new_page(); await pg.route('https://www.gstatic.com/**',lambda r:r.abort()); await pg.goto(URL); await pg.wait_for_timeout(1500)
+        hgt=await pg.evaluate("document.querySelector('.app-header').offsetHeight"); ow=await pg.evaluate("[document.documentElement.scrollWidth,innerWidth]")
+        ok(hgt<=95 and ow[0]==ow[1] and await pg.locator('#login-btn').is_visible(),'T21 幅390pxでも固定ヘッダーが小さい（高さ95px以下・横にはみ出さない・ログインボタンが見える）',[hgt,ow])
+        await ctx.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

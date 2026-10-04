@@ -1,4 +1,4 @@
-/* app_test40_06_post.js — Discordへの投稿処理
+/* app_test41_06_post.js — Discordへの投稿処理
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   // 投稿処理は、段階ごとの小さな関数に分けてある（validateBeforePost → resolvePostTarget → syncWebhookAvatars → sendToSelectedChannels → showPostResult）
@@ -44,7 +44,7 @@
       if (!ch.webhookUrl || (appState.botAvatarData ? wasPatched === avSig : !wasPatched)) continue;   // アイコン解除時は、以前に設定したWebhookのアイコンも外す
       try {
         const r = await fetchRetry(ch.webhookUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ avatar: appState.botAvatarData || null }) });
-        if (r.ok) { try { if (appState.botAvatarData) localStorage.setItem(avKey, avSig); else localStorage.removeItem(avKey); } catch (e) { logSoft('if (appState.botAvatarData) localStorage.setI', e); } }
+        if (r.ok) { try { if (appState.botAvatarData) localStorage.setItem(avKey, avSig); else localStorage.removeItem(avKey); } catch (e) { logSoft('syncWebhookAvatars', e); } }
         else toast(`⚠️ 「${ch.name}」のアイコン更新に失敗しました（HTTP ${r.status}）。投稿は続行します。`);
       } catch (err) { console.error("Webhook PATCH failed:", err); }
     }
@@ -122,7 +122,7 @@
     try {
       const r = await fetchRetry(ch.webhookUrl.trim(), { method: 'GET' }, 1, 10000);
       if (r.ok) { const j = await r.json().catch(() => ({})); if (j.guild_id) { ch.guildId = j.guild_id; saveState(); renderHistoryTable(); } }
-    } catch (e) { logSoft('const r = await fetchRetry(ch.webhookUrl.trim', e); }
+    } catch (e) { logSoft('ensureGuildId', e); }
   }
   async function sendToChannel(ch, title, chunks, o) {
     const res = { threadId: null, failedAt: 0, replyFailed: false, unsure: false };

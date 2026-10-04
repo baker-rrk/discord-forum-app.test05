@@ -1,4 +1,4 @@
-/* app_test40_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
+/* app_test41_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   let _dlgChain = Promise.resolve();
@@ -14,7 +14,7 @@
       const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'app-dialog-btn ' + (opts.danger ? 'danger' : 'primary'); ok.textContent = opts.okText || 'OK';
       if (opts.alert) row.append(ok); else row.append(cancel, ok); box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov);
       const prev = document.activeElement;
-      const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) { logSoft('prev.focus(); }', e); } } resolve(v); };
+      const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) { logSoft('appConfirm', e); } } resolve(v); };
       const onKey = e => {
         if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!opts.strict) done(false); }
         else if (e.key === 'Tab') { e.preventDefault(); (opts.alert || document.activeElement !== ok ? ok : cancel).focus(); }
@@ -49,7 +49,7 @@
     let done = false;
     try { await navigator.clipboard.writeText(text); done = true; }
     catch (e) {
-      try { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;'; document.body.appendChild(ta); ta.select(); done = document.execCommand('copy'); ta.remove(); } catch (e2) { logSoft('const ta = document.createElement(textarea)', e2); }
+      try { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0;'; document.body.appendChild(ta); ta.select(); done = document.execCommand('copy'); ta.remove(); } catch (e2) { logSoft('copyPostContent', e2); }
     }
     flash(done ? '✅ コピーしました！' : '❌ コピーに失敗しました');
   }
@@ -121,7 +121,7 @@
     appState.formatConfig = { ...defaultFormatConfig, ...(appState.formatConfig || {}) };
     const _prevSchema = appState.schemaVersion || 0;
     { const el = document.getElementById('maxAttachMB'); if (el) el.value = Number(appState.maxAttachMB) > 0 ? appState.maxAttachMB : 9.5; }
-    if (_prevSchema < 3 && saved) { try { await window.idbSetRaw('state_backup_pre_v3', saved); } catch (e) { logSoft('await window.idbSetRaw(state_backup_pre_v3,', e); } }   // 構造移行の前に、元のデータを退避（万一のとき戻せる） appState.schemaVersion = 3; if (!Array.isArray(appState.history)) appState.history = [];
+    if (_prevSchema < 3 && saved) { try { await window.idbSetRaw('state_backup_pre_v3', saved); } catch (e) { logSoft('appInit', e); } }   // 構造移行の前に、元のデータを退避（万一のとき戻せる） appState.schemaVersion = 3; if (!Array.isArray(appState.history)) appState.history = [];
     appState.scenarios.forEach(x => { if (!x.id) x.id = uid(); if ('rostrite' in x) { if (x.lostRate === undefined) x.lostRate = x.rostrite; delete x.rostrite; } });
 
     ensureChannelIds(); appState.scenarios.forEach(normalizePosted);
@@ -142,7 +142,7 @@
 
   window.onload = async () => { try { await appInit(); } catch (e) { console.error(e); toast('❌ 起動中にエラーが発生しました: ' + (e && e.message || e)); } finally { window.__appReadyResolve(); } };
   document.getElementById('login-btn').addEventListener('click', () => { if (!window.__fbLoaded) toast('⚠️ ログイン機能を読み込めていません。通信状況を確認して、ページを再読み込みしてください'); });
-  try { Object.keys(localStorage).filter(k => k.startsWith('discord_avatar_patched_http')).forEach(k => localStorage.removeItem(k)); } catch (e) { logSoft('Object.keys(localStorage).filter(k => k.start', e); }   // 旧版がURLをキーにして残したもの
+  try { Object.keys(localStorage).filter(k => k.startsWith('discord_avatar_patched_http')).forEach(k => localStorage.removeItem(k)); } catch (e) { logSoft('appInit', e); }   // 旧版がURLをキーにして残したもの
 
 function mdToHtml(text) {   // プレビュー用の簡易Markdown（見出し・引用・太字・コード・スポイラー）
     const inline = t => escapeHTML(t.replace(/\u200B/g, '')).replace(/`([^`\n]+)`/g, '<code class="md-code">$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/\|\|([^|\n]+)\|\|/g, '<span class="md-spoiler">$1</span>').replace(/:link:/g, '🔗');

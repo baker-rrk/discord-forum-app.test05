@@ -202,7 +202,7 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   const app=loadApp(), grab=(re)=>app.match(re)[0];
   const fnText=n=>{const a=app.indexOf('function '+n);return app.slice(a,app.indexOf('\n  }\n',a)+5).replace(/^\n/,'');};
   const cfgSrc=grab(/const defaultFormatConfig = \{[\s\S]*?\n\s*\};/);
-  const env=new Function('_s','DECOR_STYLES',cfgSrc+'\n'+fnText('formatItemSection')+'\n'+grab(/const hoHeading = [^\n]*/)+'\n'+grab(/const sanitizeSubs = [^\n]*/)+'\n'+grab(/function sanitizeHOs[\s\S]*?\n\}\n/)+'\n'+grab(/function hoMessages[\s\S]*?\n\}\n/)+'\nreturn {defaultFormatConfig,formatItemSection,hoHeading,hoMessages,sanitizeHOs};')(v=>v==null?'':String(v),['default','simple','fancy','codeblock','none']);
+  const env=new Function('_s','DECOR_STYLES',cfgSrc+'\n'+fnText('formatItemSection')+'\n'+grab(/const hoHeading = [^\n]*/)+'\n'+grab(/const safeId = [^\n]*/)+'\n'+grab(/const uniqIds = [^\n]*/)+'\n'+grab(/const sanitizeSubs = [^\n]*/)+'\n'+grab(/function sanitizeHOs[\s\S]*?\n\}\n/)+'\n'+grab(/function hoMessages[\s\S]*?\n\}\n/)+'\nreturn {defaultFormatConfig,formatItemSection,hoHeading,hoMessages,sanitizeHOs};')(v=>v==null?'':String(v),['default','simple','fancy','codeblock','none']);
   const fmt=env.formatItemSection, cfg=env.defaultFormatConfig; globalThis.defaultFormatConfig=cfg; globalThis.appState={formatConfig:cfg}; globalThis.hoId=()=>'g';
   const e=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   e(cfg.h1==='## ❚ '&&cfg.quote==='> ','見出し「## ❚ 」と引用「> 」の記号が、指定のイメージと一致');
@@ -238,4 +238,14 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   console.log((/input, textarea, select, button \{ font-family: inherit; \}/.test(css)?'OK  ':'NG  ')+'入力欄・テキストエリアもプレビューと同じフォントを継承（「~」の高さをそろえる）');
   console.log((/id="previewZoomBtn" data-on-click="preview-zoom"/.test(html)&&/'preview-zoom': function/.test(app)&&/function togglePreviewZoom/.test(app)&&/\.preview-area\.zoomed \{/.test(css)?'OK  ':'NG  ')+'プレビューの拡大表示（ボタン・処理・スタイル）がそろっている');
   console.log((/ho-filedrag/.test(css)&&/ho-filedrag/.test(app)&&/ho-imghint/.test(app)?'OK  ':'NG  ')+'HOの画像ドラッグ中の枠と案内文がある');
+}
+
+{ // 属性注入の防止・HO下書きの一本化
+  const app=loadApp(), grab=(re)=>app.match(re)[0];
+  const env=new Function('_s','DECOR_STYLES',grab(/const safeId = [^\n]*/)+'\n'+grab(/const uniqIds = [^\n]*/)+'\n'+grab(/const sanitizeSubs = [^\n]*/)+'\n'+grab(/function sanitizeHOs[\s\S]*?\n\}\n/)+'\nreturn {sanitizeHOs};')(v=>v==null?'':String(v),['default','simple','fancy','codeblock','none']);
+  globalThis.hoId=()=>'gen';
+  const r=env.sanitizeHOs([{name:'x',blocks:[{id:'a" onmouseover="alert(1)" q="',type:'item'},{id:'a__onmouseover__alert_1___q__',type:'image'},{id:'',type:'split'},{id:'<img src=x>',type:'item'}]}]);
+  const ids=r[0].blocks.map(b=>b.id);
+  console.log((ids.every(i=>/^[\w-]+$/.test(i))&&new Set(ids).size===ids.length?'OK  ':'NG  ')+'HOのブロックIDは安全な文字だけになり、重複もない（'+ids.join(' | ')+'）');
+  console.log((/const saveHoDraft = \(\) => scheduleDraftSave\(\)/.test(app)&&/secretHOs: typeof secretHOs/.test(app)&&!/draft_ho/.test(app)?'OK  ':'NG  ')+'HOの下書きは公開情報の下書きに含まれる（別保存の draft_ho は廃止）');
 }

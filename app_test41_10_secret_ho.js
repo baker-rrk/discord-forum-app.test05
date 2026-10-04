@@ -1,4 +1,4 @@
-/* app_test40_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
+/* app_test41_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
  * 各HOは { name, tagline, blocks }。blocks は公開情報と同じ「項目ブロック」{ type:'item', keyName, val, decorStyle, subItems } と画像ブロック { type:'image', previewUrl }。
  * 出力の1行目は「# HO名：__tagline__」（tagline が空なら見出し行なし）。HOの内容はDiscordへは送信されません（DMへ手動で貼る下書き）。 */
 const DECOR_LABELS = [['default', '引用（> ）'], ['simple', '簡易リスト'], ['fancy', '装飾リスト'], ['codeblock', 'コードブロック'], ['none', '装飾なし']];
@@ -7,15 +7,16 @@ const hoId = () => 'hb_' + Math.random().toString(36).slice(2, 9);
 const newHOItem = () => ({ id: hoId(), type: 'item', keyName: '', val: '', decorStyle: 'default', subItems: [] });
 const newHO = () => ({ name: 'HO' + (secretHOs.length + 1), tagline: '', blocks: [newHOItem()] });
 const sanitizeSubs = list => (Array.isArray(list) ? list : []).filter(o => o && typeof o === 'object').map(o => ({ title: _s(o.title), val: _s(o.val), style: o.style === 'bold' ? 'bold' : 'plain' }));
+const safeId = v => String(v == null ? '' : v).replace(/[^\w-]/g, '_') || hoId();   // 画面のHTML属性に入るので、英数字・_・- だけにする
+const uniqIds = arr => { const seen = new Set(); arr.forEach(b => { while (seen.has(b.id)) b.id += '_' + Math.random().toString(36).slice(2, 5); seen.add(b.id); }); return arr; };
 function sanitizeHOs(list) {   // 取り込み・同期・旧形式（テキストだけのブロック）のデータを、今の形に整える
-  return (Array.isArray(list) ? list : []).filter(h => h && typeof h === 'object').map(h => ({ name: _s(h.name), tagline: _s(h.tagline), blocks: (Array.isArray(h.blocks) ? h.blocks : []).filter(b => b && typeof b === 'object').map(b => b.type === 'image'
-    ? { id: _s(b.id) || hoId(), type: 'image', previewUrl: _s(b.previewUrl), collapsed: b.collapsed === true }
-    : b.type === 'split' ? { id: _s(b.id) || hoId(), type: 'split' }
-    : { id: _s(b.id) || hoId(), type: 'item', keyName: _s(b.keyName), val: _s(b.val), decorStyle: DECOR_STYLES.includes(b.decorStyle) ? b.decorStyle : 'default', subItems: sanitizeSubs(b.subItems), collapsed: b.collapsed === true }) }));
+  return (Array.isArray(list) ? list : []).filter(h => h && typeof h === 'object').map(h => ({ name: _s(h.name), tagline: _s(h.tagline), blocks: uniqIds((Array.isArray(h.blocks) ? h.blocks : []).filter(b => b && typeof b === 'object').map(b => b.type === 'image'
+    ? { id: safeId(b.id), type: 'image', previewUrl: _s(b.previewUrl), collapsed: b.collapsed === true }
+    : b.type === 'split' ? { id: safeId(b.id), type: 'split' }
+    : { id: safeId(b.id), type: 'item', keyName: _s(b.keyName), val: _s(b.val), decorStyle: DECOR_STYLES.includes(b.decorStyle) ? b.decorStyle : 'default', subItems: sanitizeSubs(b.subItems), collapsed: b.collapsed === true })) }));
 }
 const cloneHOs = () => sanitizeHOs(JSON.parse(JSON.stringify(secretHOs)));
-let _hoDraftT = null;
-function saveHoDraft() { clearTimeout(_hoDraftT); _hoDraftT = setTimeout(() => { try { window.idbSetRaw('draft_ho', JSON.stringify(secretHOs)).catch(e => logSoft('ho draft', e)); } catch (e) { logSoft('ho draft', e); } }, 600); }
+const saveHoDraft = () => scheduleDraftSave();   // HOの下書きは、公開情報と同じ下書き（画像は参照）に含めて保存する
 function setHOs(list) { secretHOs = sanitizeHOs(list); activeHO = -1; renderHoAll(); saveHoDraft(); }
 function renderHoAll() { renderHoTabs(); renderHoPanel(); applyHoView(); }
 function renderHoTabs() {
@@ -167,9 +168,6 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
     if (dragHb && h && w) { e.preventDefault(); if (w.dataset.hb !== dragHb) { const r = w.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2, from = h.blocks.findIndex(x => x.id === dragHb), [m] = h.blocks.splice(from, 1), ti = h.blocks.findIndex(x => x.id === w.dataset.hb); h.blocks.splice(after ? ti + 1 : ti, 0, m); renderHoPanel(); changed(); } dragHb = null; return; }
     if (dragTab >= 0 && tb) { e.preventDefault(); moveTab(dragTab, Number(tb.dataset.hdrag)); dragTab = -1; return; }
     if (h && e.dataTransfer && e.dataTransfer.files.length && e.target.closest && e.target.closest('#hoPanel')) { e.preventDefault(); await addImages([...e.dataTransfer.files], w && h.blocks.find(x => x.id === w.dataset.hb && x.type === 'image')); }
-  });
-  window.addEventListener('load', async () => {   // 作業中のHOを復元（シナリオを呼び出した後は、そのシナリオのHOが優先される）
-    try { const raw = await window.idbGetRaw('draft_ho'); if (raw && !secretHOs.length) { secretHOs = sanitizeHOs(JSON.parse(raw)); renderHoAll(); } } catch (e) { logSoft('ho restore', e); }
   });
   renderHoAll();
 })();

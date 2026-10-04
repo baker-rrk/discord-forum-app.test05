@@ -1,4 +1,4 @@
-/* app_test40_02_storage_images.js — 画像の保存(IndexedDB)・直列化・画像の遅延読み込み
+/* app_test41_02_storage_images.js — 画像の保存(IndexedDB)・直列化・画像の遅延読み込み
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   const PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -98,7 +98,7 @@
     [...container.children].forEach((item, idx) => {
       const hd = item.querySelector('.sortable-header'); if (!hd) return;
       const h = document.createElement('span'); h.className = 'drag-handle'; h.textContent = '⠿'; h.title = 'ドラッグで並べ替え'; h.draggable = true;
-      h.addEventListener('dragstart', e => { dragFrom = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'block'); try { e.dataTransfer.setDragImage(item, 20, 20); } catch (x) { logSoft('e.dataTransfer.setDragImage(item, 20, 20); }', x); } item.classList.add('dragging'); });
+      h.addEventListener('dragstart', e => { dragFrom = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'block'); try { e.dataTransfer.setDragImage(item, 20, 20); } catch (x) { logSoft('enhanceSortable', x); } item.classList.add('dragging'); });
       h.addEventListener('dragend', () => { dragFrom = null; container.querySelectorAll('.dragging,.drag-over-top,.drag-over-bottom').forEach(x => x.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom')); });
       h.addEventListener('click', e => e.stopPropagation()); hd.prepend(h);
       const before = e => { const r = item.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; };
