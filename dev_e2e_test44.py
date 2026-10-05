@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test41.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test44.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -319,6 +319,90 @@ async def main():
         hgt=await pg.evaluate("document.querySelector('.app-header').offsetHeight"); ow=await pg.evaluate("[document.documentElement.scrollWidth,innerWidth]")
         ok(hgt<=95 and ow[0]==ow[1] and await pg.locator('#login-btn').is_visible(),'T21 幅390pxでも固定ヘッダーが小さい（高さ95px以下・横にはみ出さない・ログインボタンが見える）',[hgt,ow])
         await ctx.close()
+        # T22 共通化した部品：公開情報側の書式ボタン・並べ替え・サブ項目のUIがHOと同じ構造
+        pg=await newpage(b,None)
+        await pg.evaluate("blockOrder.find(b=>b.id==='intro').collapsed=false;renderBlockUI()")
+        ta=pg.locator('#intro'); await ta.fill('abc'); await ta.select_text(); await pg.locator('[data-ba="fmt"][data-bid="intro"]').first.click(); await pg.wait_for_timeout(200)
+        ok(await ta.input_value()=='**abc**' and await pg.evaluate("blockOrder.find(b=>b.id==='intro').val")=='**abc**','T22 公開情報の書式ボタン（太字）が効き、データにも反映される')
+        await ta.fill('a\nb'); await ta.select_text(); await pg.locator('[data-ba="fmt"][data-bid="intro"][data-fb="> "]').click(); await pg.wait_for_timeout(200)
+        ok(await ta.input_value()=='> a\n> b','T22 引用ボタンは選択した各行の先頭に付く')
+        await pg.locator('[data-ba="sub-add"][data-bid="intro"]').click(); await pg.wait_for_timeout(200)
+        skel=lambda sel: pg.evaluate("(s)=>{const el=document.querySelector(s);const f=n=>n.tagName.toLowerCase()+(n.className?'.'+n.className.split(' ').join('.'):'')+'['+[...n.children].map(f).join(',')+']';return f(el)}",sel)
+        pub=await skel('#sortableBlockContainer .sub-item')
+        await pg.locator('[data-ho-act="add-ho"]').click(); await pg.locator('#hoPanel [data-ho-act="sub-add"]').click(); await pg.wait_for_timeout(200)
+        ho=await skel('#hoPanel .sub-item')
+        ok(pub==ho,'T22 サブ項目の編集UIは、公開情報とHOで同じ構造（共通の部品から作られている）',[pub,ho])
+        await pg.locator('#hoPanel [data-ho-in="sub-title"]').fill('甲'); await pg.locator('#hoPanel [data-ho-in="sub-style"]').select_option('bold')
+        ok(await pg.evaluate("secretHOs[0].blocks[0].subItems[0].title")=='甲' and await pg.evaluate("secretHOs[0].blocks[0].subItems[0].style")=='bold','T22 HO側のサブ項目の入力・表記の切り替えもデータに反映される')
+        ok(not pg.errs,'T22 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T23 壊れた保存データでも起動でき、読み込めないデータは退避される
+        BAD={'schemaVersion':'x','botName':5,'channels':[None,{'id':1,'name':{},'tags':7,'webhookUrl':9},{'id':'c2','name':'ok','webhookUrl':'https://discord.com/api/webhooks/1/a','tags':[None,{'name':1,'id':{}}]}],
+          'history':['x',{'date':5,'title':{},'channels':None},None],
+          'scenarios':[None,5,'str',{'id':1,'title':None,'fullBlockData':'x','secretHOs':'y','tags':'z','postedChannels':'q','postedInfo':7},
+            {'id':'ok','title':'T','fullBlockData':[{'type':'summary_container','items':'bad'},{'type':7},None,{'type':'textarea','subItems':[None,{'title':3}]}],
+             'secretHOs':[{'name':None,'blocks':[{'type':'item','subItems':'bad'},{'id':{},'type':'image','previewUrl':5},None,'x']},None,'bad'],'favorite':'yes'}]}
+        pg=await newpage(b,None); await pg.evaluate("(s)=>window.idbSetRaw('state',s)",json.dumps(BAD)); await pg.reload(); await pg.wait_for_timeout(2500)
+        ok(not pg.errs and await pg.locator('.tab-btn').count()==4,'T23 項目が壊れた保存データでも、エラーなく起動する',pg.errs[:2])
+        ok(await pg.evaluate("appState.scenarios.every(s=>s&&typeof s==='object')&&appState.channels.every(c=>c&&typeof c==='object')&&Array.isArray(appState.history)"),'T23 壊れた要素は取り除かれ、残りは安全な形に整えられる')
+        for t_ in ['databaseTab','historyTab','settingsTab','postTab']:
+            await pg.locator(f'button[data-on-click="switchTab-{t_}-event"]').click(); await pg.wait_for_timeout(200)
+        opts=await pg.evaluate("[...document.querySelectorAll('#dbScenarioSelect option')].map(o=>o.text).join('|')")
+        ok(any(o.startswith('T (') or o.startswith('★ T (') for o in opts.split('|')),'T23 壊れたデータの中の正常なシナリオはプルダウンに出る',opts)
+        sid3=await pg.evaluate("appState.scenarios.find(s=>s.id==='ok').id"); await pg.select_option('#dbScenarioSelect',sid3); await pg.wait_for_timeout(500)
+        ok(await pg.input_value('#title')=='T' and not pg.errs,'T23 壊れた項目を含むシナリオも呼び出せる',pg.errs[:2])
+        await pg.locator('button[data-on-click="switchTab-databaseTab-event"]').click(); await pg.wait_for_timeout(300)
+        await pg.locator('#dbCardContainer [data-act="edit"]').first.click(); await pg.wait_for_timeout(300); ok(not pg.errs,'T23 編集モーダルも開ける',pg.errs[:2])
+        await pg.context.close()
+        raw='{"scenarios":[{"id":"x","title":"途中で切れたデータ'
+        pg=await newpage(b,None); await pg.evaluate("(s)=>window.idbSetRaw('state',s)",raw); await pg.reload(); await pg.wait_for_timeout(2600)
+        ok(await pg.evaluate("window.idbGetRaw('state_backup_corrupt')")==raw,'T23 読み込めない保存データは、元のまま退避される')
+        ok('保存データを読み込めませんでした' in await pg.inner_text('#toast-box') and await pg.locator('.tab-btn').count()==4 and not pg.errs,'T23 その旨をお知らせし、アプリは使える状態で起動する',pg.errs[:2])
+        await pg.context.close()
+        # T24 設定画面がすっきり・自分のフォーマット
+        import base64,tempfile
+        png3=tempfile.NamedTemporaryFile(suffix='.png',delete=False); png3.write(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==')); png3.close()
+        pg=await newpage(b,None); await pg.locator('button[data-on-click="switchTab-settingsTab-event"]').click(); await pg.wait_for_timeout(300)
+        hs=await pg.evaluate("[...document.querySelectorAll('#settingsTab > .card')].map(c=>Math.round(c.getBoundingClientRect().height))"); tot=await pg.evaluate("Math.round(document.getElementById('settingsTab').getBoundingClientRect().height)")
+        ok(hs[0]<=160 and tot<=1050,'T24 設定画面がすっきり（Bot・基本設定のカードは以前の220px→160px以下、全体は1319px→1050px以下）',[hs,tot])
+        ok(await pg.locator('#botName').is_visible() and await pg.locator('#maxAttachMB').is_visible() and await pg.locator('.bot-avatar').is_visible(),'T24 Bot表示名・添付上限・アイコンが1行に並ぶ')
+        await pg.locator('#botAvatarInput').set_input_files(png3.name); await pg.wait_for_timeout(900)
+        ok(await pg.locator('#botAvatarPreview').is_visible() and await pg.locator('#botAvatarClearBtn').is_visible(),'T24 アイコンを選ぶと丸いプレビューが出て、解除ボタンが現れる')
+        await pg.locator('#botAvatarClearBtn').click(); await pg.wait_for_timeout(300)
+        ok(not await pg.locator('#botAvatarPreview').is_visible() and not await pg.locator('#botAvatarClearBtn').is_visible(),'T24 アイコンを解除できる')
+        # フォーマットの追加・設定
+        await pg.locator('[data-fmt-act="add"]').click(); await pg.wait_for_timeout(200)
+        await pg.locator('[data-fmt-in="name"]').fill('キャラ紹介'); await pg.locator('[data-fmt-in="headPre"]').fill('### '); await pg.locator('[data-fmt-in="linePre"]').fill('- '); await pg.wait_for_timeout(500)
+        ok(await pg.locator('.fmt-sample').inner_text()=='### 項目名\n- サンプル本文1行目\n- サンプル本文2行目','T24 フォーマットを追加して設定すると、サンプル出力にすぐ反映される')
+        fid=await pg.evaluate('appState.formats[0].id')
+        await pg.locator('button[data-on-click="switchTab-postTab-event"]').click(); await pg.evaluate("blockOrder.find(b=>b.id==='intro').collapsed=false;renderBlockUI()")
+        opt=await pg.evaluate("[...document.querySelectorAll('[data-bc=\"decor\"][data-bid=\"intro\"] option')].map(o=>o.text).join('|')")
+        ok('🎨 キャラ紹介' in opt,'T24 公開情報のブロックの装飾プルダウンに、自分のフォーマットが「🎨 名前」で出る',opt)
+        await pg.fill('#intro','a\nb'); await pg.locator('[data-bc="decor"][data-bid="intro"]').select_option(fid); await pg.wait_for_timeout(300)
+        txt=await pg.evaluate("buildPostData()[0].text")
+        ok('- a\n- b' in txt and '\n> a' not in txt,'T24 選ぶと、投稿テキストが自分のフォーマットで出力される',txt)
+        ok('- a' in await pg.inner_text('#pvContent'),'T24 プレビューにも反映される')
+        await pg.locator('[data-ho-act="add-ho"]').click(); await pg.wait_for_timeout(200)
+        ok('🎨 キャラ紹介' in await pg.evaluate("[...document.querySelectorAll('#hoPanel [data-ho-in=\"decor\"] option')].map(o=>o.text).join('|')"),'T24 HOの項目ブロックにも、自分のフォーマットが選べる')
+        await pg.locator('#hoPanel [data-ho-in="key"]').fill('甲'); await pg.locator('#hoPanel [data-ho-in="text"]').fill('x\ny'); await pg.locator('#hoPanel [data-ho-in="decor"]').select_option(fid); await pg.wait_for_timeout(200)
+        ok(await pg.evaluate('hoMessages(secretHOs[0])[0].text')=='### 甲\n- x\n- y','T24 HOのDM用テキストも自分のフォーマットで出る')
+        await pg.locator('[data-ho-act="tab"][data-hi="-1"]').click(); await pg.locator('button[data-on-click="switchTab-settingsTab-event"]').click()
+        await pg.locator('[data-fmt-in="name"]').fill('キャラ紹介改'); await pg.wait_for_timeout(700)
+        await pg.locator('button[data-on-click="switchTab-postTab-event"]').click()
+        ok('🎨 キャラ紹介改' in await pg.evaluate("[...document.querySelectorAll('[data-bc=\"decor\"][data-bid=\"intro\"] option')].map(o=>o.text).join('|')"),'T24 フォーマット名を変えると、プルダウンの表示名にも反映される')
+        await pg.wait_for_timeout(800); await pg.reload(); await pg.wait_for_timeout(2200)
+        ok(await pg.evaluate("appState.formats.length")==1 and await pg.evaluate("appState.formats[0].name")=='キャラ紹介改','T24 再読み込みしても、フォーマットが残っている')
+        await pg.locator('button[data-on-click="switchTab-settingsTab-event"]').click()
+        async with pg.expect_download() as dl2: await pg.locator('button[data-on-click="exportData"]').click()
+        await (await dl2.value).save_as('/tmp/e2e/fmt_backup.json'); ok('formats' in json.load(open('/tmp/e2e/fmt_backup.json',encoding='utf-8')) and 'キャラ紹介改' in open('/tmp/e2e/fmt_backup.json',encoding='utf-8').read(),'T24 バックアップ(JSON)にもフォーマットが含まれる')
+        await pg.locator('[data-fmt-act="dup"]').click(); await pg.wait_for_timeout(200)
+        ok(await pg.evaluate('appState.formats.length')==2,'T24 フォーマットを複製できる')
+        await pg.locator('[data-fmt-act="del"]').last.click(); await pg.wait_for_timeout(200); await click_btn(pg,'削除'); await pg.wait_for_timeout(300)
+        ok(await pg.evaluate('appState.formats.length')==1,'T24 フォーマットを削除できる（確認ダイアログ付き）')
+        await pg.locator('[data-fmt-act="del"]').first.click(); await pg.wait_for_timeout(200); await click_btn(pg,'削除'); await pg.wait_for_timeout(800)
+        await pg.locator('button[data-on-click="switchTab-postTab-event"]').click(); await pg.wait_for_timeout(300)
+        txt=await pg.evaluate("buildPostData()[0].text")
+        ok('> a\n> b' in txt,'T24 使っていたフォーマットを削除すると、そのブロックは「通常」の表示に戻る',txt)
+        ok(not pg.errs,'T24 エラーなし',pg.errs[:2]); await pg.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

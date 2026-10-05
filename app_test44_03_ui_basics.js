@@ -1,4 +1,4 @@
-/* app_test41_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
+/* app_test44_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   let _dlgChain = Promise.resolve();
@@ -109,7 +109,15 @@
     let saved = null;
     try { saved = await window.idbGetRaw('state'); } catch (e) { console.error(e); }
     if (!saved) saved = localStorage.getItem('discord_forum_tool_data_v1'); // 旧バージョンからの引き継ぎ
-    if (saved) { try { appState = Object.assign(appState, JSON.parse(saved)); } catch(e){} }
+    let stateCorrupt = false;
+    if (saved) {
+      try { appState = repairLoadedState(Object.assign(appState, JSON.parse(saved))); }
+      catch (e) {   // 読み込めない（壊れている）場合は、元のデータを退避してから起動する（次の保存で上書きされて失われないように）
+        stateCorrupt = true; logSoft('appInit parse', e);
+        try { await window.idbSetRaw('state_backup_corrupt', saved); } catch (x) { logSoft('appInit backup', x); }
+      }
+    }
+    if (stateCorrupt) setTimeout(() => toast('⚠️ 保存データを読み込めませんでした。元のデータは退避してあります（設定タブの「🕰 移行前データをJSONで書き出し」から取り出せます）'), 1200);
     try {
       await hydrateRefs(appState);
       if ((saved || '').replace(/"botAvatarData":"[^"]*"/, '').includes('data:image/')) {   // 旧形式（画像が状態に埋まっている）を移行

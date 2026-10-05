@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Discord フォーラム概要自動投稿ツール</title>
-  <link rel="stylesheet" href="discord_forum_app_test41.css">
+  <link rel="stylesheet" href="discord_forum_app_test44.css">
 </head>
 <body>
 
@@ -379,50 +379,36 @@
 <!-- 4. 初期設定 ＆ 記号カスタマイズ画面 -->
 <div id="settingsTab" class="tab-content">
   <div class="card">
-    <div class="card-title">🤖 Bot基本設定</div>
-    <div class="grid-2">
-      <div class="form-group">
-        <label>Bot表示名</label>
-        <input type="text" id="botName" value="概要投稿Bot" data-on-input="appState-botName-this-value-saveState-tr">
+    <div class="card-title">🤖 Bot・投稿の基本設定</div>
+    <div class="bot-row">
+      <div class="bot-avatar drop-zone" title="Botアイコン：クリックして選択、または画像をドラッグ＆ドロップ" data-on-click="document-getElementById-botAvatarInput-click" data-on-dragover="handleDragOver-event" data-on-dragleave="handleDragLeave-event" data-on-drop="handleBotAvatarDrop-event">
+        <span id="botAvatarDropText">📷</span>
+        <input type="file" id="botAvatarInput" accept="image/*" style="display:none;" data-on-change="handleBotAvatarSelect-event">
+        <img id="botAvatarPreview" class="image-preview-thumb" style="display:none;" alt="">
       </div>
-      <div class="form-group">
-        <label>Botアイコン (画像をドラッグ＆ドロップで設定)</label>
-        <div class="drop-zone" data-on-click="document-getElementById-botAvatarInput-click" data-on-dragover="handleDragOver-event" data-on-dragleave="handleDragLeave-event" data-on-drop="handleBotAvatarDrop-event" style="padding:10px;">
-          <span id="botAvatarDropText" style="font-size:0.85rem;">📷 画像をここにドロップ または クリック</span>
-          <input type="file" id="botAvatarInput" accept="image/*" style="display:none;" data-on-change="handleBotAvatarSelect-event">
-          <img id="botAvatarPreview" class="image-preview-thumb" style="display:none; max-height:60px;">
-        </div>
-        <button type="button" class="btn-sort btn-danger" style="margin-top:6px; display:none;" id="botAvatarClearBtn" data-on-click="clearBotAvatar">🗑️ アイコンを解除</button>
-        <div style="font-size:0.75rem; color:var(--dc-text-muted); margin-top:4px;">※投稿直前にWebhook自体のアイコンを上書き更新(PATCH)することでローカル画像を反映します（アイコンを解除すると、次の投稿時にWebhook側も初期アイコンへ戻します）。表示名は投稿ごとに指定するので、Webhookの名前は変更しません。</div>
-      </div>
+      <div class="form-group" style="flex:1; min-width:150px; margin:0;"><label>Bot表示名</label><input type="text" id="botName" value="概要投稿Bot" data-on-input="appState-botName-this-value-saveState-tr"></div>
+      <div class="form-group" style="margin:0;"><label>添付ファイルの上限</label><div style="display:flex; align-items:center; gap:4px;"><input type="number" id="maxAttachMB" min="1" max="500" step="0.5" value="9.5" style="width:84px;" data-on-input="saveMaxAttach-this-value"> MB</div></div>
+      <button type="button" class="btn-sort btn-danger" style="display:none;" id="botAvatarClearBtn" data-on-click="clearBotAvatar">🗑️ アイコン解除</button>
     </div>
+    <details class="set-note"><summary>アイコン・添付上限について</summary><p>アイコンは、投稿直前にWebhook自体のアイコンを更新して反映します（解除すると次の投稿時に初期アイコンへ戻します）。表示名は投稿ごとに指定するので、Webhookの名前は変更しません。添付上限はサーバーのブースト状況で異なります。この値を超える画像は圧縮した画像で送り、1通の合計が超える場合は投稿前にお知らせします。</p></details>
   </div>
-
   <div class="card">
-    <div class="card-title">🎨 フォーマット・記号カスタマイズ</div>
-    <div class="grid-3">
-      <div class="form-group"><label>通常(デフォルト): 見出し (h1)</label><input type="text" id="cfgH1" data-on-input="saveFormatConfig-renderPreview"></div>
-      <div class="form-group">
-        <label>概要まとめ: 項目カッコ 前 / 後</label>
-        <div style="display:flex; gap:4px;">
-          <input type="text" id="cfgSubPre" data-on-input="saveFormatConfig-renderPreview">
-          <input type="text" id="cfgSubPost" data-on-input="saveFormatConfig-renderPreview">
-        </div>
-      </div>
+    <div class="card-title">🎨 フォーマット・記号</div>
+    <div class="fmt-grid">
+      <div><label>通常: 見出し(h1)</label><input type="text" id="cfgH1" data-on-input="saveFormatConfig-renderPreview"></div>
+      <div><label>概要まとめ: 項目カッコ 前 / 後</label><div style="display:flex; gap:4px;"><input type="text" id="cfgSubPre" data-on-input="saveFormatConfig-renderPreview"><input type="text" id="cfgSubPost" data-on-input="saveFormatConfig-renderPreview"></div></div>
+      <div><label>シンプル: 見出し</label><input type="text" id="cfgSimpleH1" data-on-input="saveFormatConfig-renderPreview"></div>
+      <div><label>シンプル: 箇条書き</label><input type="text" id="cfgSimpleList" data-on-input="saveFormatConfig-renderPreview"></div>
+      <div><label>ファンシー: 見出し</label><input type="text" id="cfgFancyH1" data-on-input="saveFormatConfig-renderPreview"></div>
+      <div><label>ファンシー: 箇条書き</label><input type="text" id="cfgFancyList" data-on-input="saveFormatConfig-renderPreview"></div>
     </div>
-    <div class="grid-3" style="margin-top:8px;">
-      <div class="form-group"><label>シンプル: 見出し</label><input type="text" id="cfgSimpleH1" data-on-input="saveFormatConfig-renderPreview"></div>
-      <div class="form-group"><label>シンプル: 箇条書き</label><input type="text" id="cfgSimpleList" data-on-input="saveFormatConfig-renderPreview"></div>
-    </div>
-    <div class="grid-3" style="margin-top:8px;">
-      <div class="form-group"><label>ファンシー: 見出し</label><input type="text" id="cfgFancyH1" data-on-input="saveFormatConfig-renderPreview"></div>
-      <div class="form-group"><label>ファンシー: 箇条書き</label><input type="text" id="cfgFancyList" data-on-input="saveFormatConfig-renderPreview"></div>
-    </div>
+    <div class="fmt-sub">自分のフォーマット <span>（ブロックの装飾プルダウンに「🎨 名前」として出ます）</span></div>
+    <div id="customFormatList"></div>
+    <button type="button" class="btn btn-secondary btn-sm" data-fmt-act="add">＋ フォーマットを追加</button>
   </div>
-
   <div class="card">
     <div class="card-title">🔗 投稿先フォーラム & タグIDマトリクス設定</div>
-    <div style="font-size:0.75rem; color:var(--dc-text-muted); margin-bottom:10px; line-height:1.6;">※Webhook URLはクラウド同期にも含まれます。Firestoreのルールで「本人のみ読み書き可」になっていることを確認してください。入力欄は編集中以外は伏せ字で表示されます。</div>
+    <details class="set-note"><summary>Webhook URLの扱いについて</summary><p>※Webhook URLはクラウド同期にも含まれます。Firestoreのルールで「本人のみ読み書き可」になっていることを確認してください。入力欄は編集中以外は伏せ字で表示されます。</p></details>
     <div id="channelConfigList"></div>
     <button type="button" class="btn btn-secondary" data-on-click="addChannelConfig">＋ チャンネルを追加</button>
   </div>
@@ -431,14 +417,9 @@
     <button type="button" class="btn btn-md" data-on-click="saveSettings">💾 設定を保存する</button>
   </div>
 
-  <div class="card">
-    <div class="card-title">添付ファイルの上限</div>
-    <p style="font-size:0.8rem; color:var(--dc-text-muted); margin:0 0 12px; line-height:1.6;">Discordの添付上限はサーバーのブースト状況で異なります。この値を超える画像は圧縮した画像で送り、1通の合計がこの値を超える場合は投稿前にお知らせします。</p>
-    <input type="number" id="maxAttachMB" min="1" max="500" step="0.5" value="9.5" style="width:120px;" data-on-input="saveMaxAttach-this-value"> MB
-  </div>
   <div class="card" id="backupCard">
     <div class="card-title">📦 バックアップ（全データ インポート / エクスポート）</div>
-    <p style="font-size:0.8rem; color:var(--dc-text-muted); margin:0 0 12px; line-height:1.6;">シナリオDB・投稿履歴・チャンネル設定・画像を、1つのJSONファイルにまとめて保存／復元します。復元すると現在のデータはファイルの内容で置き換わります（直前のデータは自動でバックアップされます）。<br>※ Webhook URLも含まれるため、ファイルは他人に共有しないでください。</p>
+    <details class="set-note"><summary>バックアップについて</summary><p>シナリオDB・投稿履歴・チャンネル設定・画像を、1つのJSONファイルにまとめて保存／復元します。復元すると現在のデータはファイルの内容で置き換わります（直前のデータは自動でバックアップされます）。<br>※ Webhook URLも含まれるため、ファイルは他人に共有しないでください。</p></details>
     <div class="actions-right" style="margin-top:0;">
       <button type="button" class="btn btn-secondary btn-md" data-on-click="exportData">💾 JSONに保存</button>
       <button type="button" class="btn btn-secondary btn-md" data-on-click="document-getElementById-importFile-click">📂 JSONから復元</button>
@@ -448,16 +429,18 @@
   </div>
 </div>
 
-<script src="app_test41_01_state_model.js"></script>
-<script src="app_test41_02_storage_images.js"></script>
-<script src="app_test41_03_ui_basics.js"></script>
-<script src="app_test41_04_forms_blocks.js"></script>
-<script src="app_test41_05_channels_save_sync.js"></script>
-<script src="app_test41_06_post.js"></script>
-<script src="app_test41_07_boot.js"></script>
-<script src="app_test41_08_events.js"></script>
-<script src="app_test41_09_actions.js"></script>
-<script src="app_test41_10_secret_ho.js"></script>
+<script src="app_test44_00_block_common.js"></script>
+<script src="app_test44_01_state_model.js"></script>
+<script src="app_test44_02_storage_images.js"></script>
+<script src="app_test44_03_ui_basics.js"></script>
+<script src="app_test44_04_forms_blocks.js"></script>
+<script src="app_test44_05_channels_save_sync.js"></script>
+<script src="app_test44_06_post.js"></script>
+<script src="app_test44_07_boot.js"></script>
+<script src="app_test44_08_events.js"></script>
+<script src="app_test44_09_actions.js"></script>
+<script src="app_test44_10_secret_ho.js"></script>
+<script src="app_test44_11_custom_formats.js"></script>
 
 
 <script type="module">
@@ -622,7 +605,7 @@
     const hm = new Map(); [...(remote.history || []), ...(local.history || [])].forEach(h => { if (h) hm.set(h.date + '|' + h.title + '|' + h.channels, h); });
     const hc = Math.max(remote.historyClearedAt || 0, local.historyClearedAt || 0), hcIso = hc ? new Date(hc).toISOString() : '';   // 履歴の全消去は、それ以前の履歴を両端末から除く
     const history = [...hm.values()].filter(h => !hcIso || String(h.date) > hcIso).sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-500);
-    await window.applyMergedState({ scenarios: out, channels, history, deletedScenarios: tomb, deletedChannels: ctomb, historyClearedAt: hc });
+    await window.applyMergedState({ scenarios: out, channels, history, deletedScenarios: tomb, deletedChannels: ctomb, historyClearedAt: hc, formats: (() => { const fm = [...(local.formats || [])]; (remote.formats || []).forEach(f => { if (f && !fm.some(x => x.id === f.id)) fm.push(f); }); return fm; })() });
   }
 
   // この端末 → クラウド（画像は新しいものだけ、シナリオは変更分だけ書き込む）

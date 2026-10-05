@@ -1,4 +1,4 @@
-/* app_test41_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
+/* app_test44_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
 /* Discord フォーラム概要自動投稿ツール — メインスクリプト（discord_forum_app_test24.html から読み込み）
@@ -8,7 +8,7 @@
 // 添付ファイル1件・1通あたりの上限（設定で変更可。サーバーのブースト状況でDiscordの上限が違うため）
 const maxAttachBytes = () => (Number(appState.maxAttachMB) > 0 ? Number(appState.maxAttachMB) : 9.5) * 1024 * 1024;
 function saveMaxAttach(v) { appState.maxAttachMB = Math.min(500, Math.max(1, Number(v) || 9.5)); saveState(true); }
-const APP_VERSION = 'test24';
+const APP_VERSION = 'test44';
 console.info('Discord forum tool', APP_VERSION);
 
 // ===== 予期しないエラーの見える化（黙って壊れないように。連続表示は3秒に1回まで） =====
@@ -99,7 +99,7 @@ console.info('Discord forum tool', APP_VERSION);
     if (!BLOCK_TYPES.has(b.type)) b.type = 'text';   // <input type="..."> に未検証の値が入らないようにする
     b.id = _s(b.id); b.label = _s(b.label);
     if (b.keyName != null) b.keyName = _s(b.keyName);
-    if (b.decorStyle && !DECOR_STYLES.includes(b.decorStyle)) b.decorStyle = 'default';
+    if (b.decorStyle && !isDecorStyle(b.decorStyle)) b.decorStyle = 'default';
     if (b.file && !(b.file instanceof Blob)) b.file = null;
     if (b.type === 'summary_container') {
       b.items = (Array.isArray(b.items) ? b.items : []).filter(i => i && typeof i === 'object').map(i => ({ keyName: _s(i.keyName), val: _s(i.val), ...(FLAT_FIELDS.includes(i.field) ? { field: i.field } : {}) }));
@@ -109,6 +109,13 @@ console.info('Discord forum tool', APP_VERSION);
     return b;
   }
   const sanitizeBlocks = arr => (Array.isArray(arr) ? arr : []).map(sanitizeBlock).filter(Boolean);
+  // 起動時に読み込んだ保存データの形を整える（旧バージョン・手編集・同期の不具合などで壊れた項目があっても、起動が止まらないように）
+  function repairLoadedState(s) {
+    if (!s || typeof s !== 'object') return s;
+    const objs = a => (Array.isArray(a) ? a : []).filter(x => x && typeof x === 'object' && !Array.isArray(x));
+    s.scenarios = objs(s.scenarios); s.channels = objs(s.channels); s.history = objs(s.history);
+    return sanitizeImported(s) || s;
+  }
   function sanitizeImported(o) {
     if (!o || typeof o !== 'object' || !Array.isArray(o.scenarios) || !Array.isArray(o.channels)) return null;
     o.channels = o.channels.filter(c => c && typeof c === 'object').map(c => ({ ...c, id: _s(c.id), name: _s(c.name), webhookUrl: _s(c.webhookUrl).trim(),
@@ -117,12 +124,14 @@ console.info('Discord forum tool', APP_VERSION);
       const out = { ...x };
       ['id', 'title', 'system', 'playerCount', 'playTime', 'shopUrl', 'imageUrl', 'reqSkills', 'recSkills', 'semiRecSkills', 'lostRate', 'aftereffect', 'trailer', 'notes', 'autoReply']
         .forEach(k => { if (k === 'title' || k in out) out[k] = _s(out[k]); });
+      out.postedInfo = (x.postedInfo && typeof x.postedInfo === 'object' && !Array.isArray(x.postedInfo)) ? x.postedInfo : {};
       out.tags = (Array.isArray(x.tags) ? x.tags : []).map(_s); if (Array.isArray(x.secretHOs)) out.secretHOs = sanitizeHOs(x.secretHOs);
       out.postedChannels = (Array.isArray(x.postedChannels) ? x.postedChannels : []).map(_s);
       if (Array.isArray(x.fullBlockData)) out.fullBlockData = sanitizeBlocks(x.fullBlockData);
       return out;
     });
     o.history = (Array.isArray(o.history) ? o.history : []).filter(h => h && typeof h === 'object');
+    o.formats = sanitizeFormats(o.formats);
     return o;
   }
   function createDefaultBlocks() {

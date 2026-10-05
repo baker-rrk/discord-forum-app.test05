@@ -1,7 +1,6 @@
-/* app_test41_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
+/* app_test44_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
  * 各HOは { name, tagline, blocks }。blocks は公開情報と同じ「項目ブロック」{ type:'item', keyName, val, decorStyle, subItems } と画像ブロック { type:'image', previewUrl }。
  * 出力の1行目は「# HO名：__tagline__」（tagline が空なら見出し行なし）。HOの内容はDiscordへは送信されません（DMへ手動で貼る下書き）。 */
-const DECOR_LABELS = [['default', '引用（> ）'], ['simple', '簡易リスト'], ['fancy', '装飾リスト'], ['codeblock', 'コードブロック'], ['none', '装飾なし']];
 let secretHOs = [], activeHO = -1;
 const hoId = () => 'hb_' + Math.random().toString(36).slice(2, 9);
 const newHOItem = () => ({ id: hoId(), type: 'item', keyName: '', val: '', decorStyle: 'default', subItems: [] });
@@ -13,7 +12,7 @@ function sanitizeHOs(list) {   // 取り込み・同期・旧形式（テキス�
   return (Array.isArray(list) ? list : []).filter(h => h && typeof h === 'object').map(h => ({ name: _s(h.name), tagline: _s(h.tagline), blocks: uniqIds((Array.isArray(h.blocks) ? h.blocks : []).filter(b => b && typeof b === 'object').map(b => b.type === 'image'
     ? { id: safeId(b.id), type: 'image', previewUrl: _s(b.previewUrl), collapsed: b.collapsed === true }
     : b.type === 'split' ? { id: safeId(b.id), type: 'split' }
-    : { id: safeId(b.id), type: 'item', keyName: _s(b.keyName), val: _s(b.val), decorStyle: DECOR_STYLES.includes(b.decorStyle) ? b.decorStyle : 'default', subItems: sanitizeSubs(b.subItems), collapsed: b.collapsed === true })) }));
+    : { id: safeId(b.id), type: 'item', keyName: _s(b.keyName), val: _s(b.val), decorStyle: isDecorStyle(b.decorStyle) ? b.decorStyle : 'default', subItems: sanitizeSubs(b.subItems), collapsed: b.collapsed === true })) }));
 }
 const cloneHOs = () => sanitizeHOs(JSON.parse(JSON.stringify(secretHOs)));
 const saveHoDraft = () => scheduleDraftSave();   // HOの下書きは、公開情報と同じ下書き（画像は参照）に含めて保存する
@@ -32,10 +31,9 @@ function applyHoView() {   // HOタブの間は、入力欄もプレビューも
   document.getElementById('hoPreviewBox').style.display = on ? '' : 'none';
   if (on) renderHoPreview();
 }
-const hoDecorSelect = b => `<select data-ho-in="decor" title="本文の装飾">${DECOR_LABELS.map(([v, l]) => `<option value="${v}" ${b.decorStyle === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-function hoSubsHtml(b) {
-  return (b.subItems || []).map((s, i) => `<div class="sub-item" data-si="${i}"><div class="sub-item-head"><input type="text" data-ho-in="sub-title" value="${escapeHTML(s.title)}" placeholder="サブタイトル（小見出し）"><select data-ho-in="sub-style" title="サブタイトルの表記（引用の外に出ます）"><option value="plain" ${s.style === 'bold' ? '' : 'selected'}>通常文字</option><option value="bold" ${s.style === 'bold' ? 'selected' : ''}>太字</option></select><button type="button" class="btn-sort btn-danger" data-ho-act="sub-del" data-si="${i}">✕ 削除</button></div><textarea data-ho-in="sub-text" placeholder="サブ項目の本文">${escapeHTML(s.val)}</textarea></div>`).join('')
-    + '<button type="button" class="btn btn-secondary btn-sm sub-add" data-ho-act="sub-add">＋ サブ項目を追加</button>';
+const hoDecorSelect = b => `<select data-ho-in="decor" title="本文の装飾">${decorOptionsHtml(b.decorStyle)}</select>`;
+function hoSubsHtml(b) {   // HO側：共通のサブ項目UIに、HO用の操作属性を渡す
+  return subItemsEditorHtml(b.subItems, (k, i) => k === 'add' ? 'data-ho-act="sub-add"' : k === 'del' ? `data-ho-act="sub-del" data-si="${i}"` : `data-ho-in="sub-${k}"`);
 }
 const hoBadge = b => (b.val && b.val.trim()) || (b.subItems || []).length ? '<span class="type-badge has-val">🟢 入力あり</span>' : '';
 function renderHoPanel() {
@@ -102,7 +100,7 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
     if (!n) return toast('自動分割は不要です（すべて' + LIM + '文字以内です）');
     h.blocks = out; renderHoPanel(); changed(); toast('✅ 分割ポイントを' + n + 'か所追加しました');
   }
-  function fmtText(ta, before, after) { const s = ta.selectionStart, e2 = ta.selectionEnd, v = ta.value, sel = v.slice(s, e2), rep = after ? before + sel + after : sel.split('\n').map(l => before + l).join('\n'); ta.value = v.slice(0, s) + rep + v.slice(e2); ta.focus(); ta.setSelectionRange(s + rep.length, s + rep.length); ta.dispatchEvent(new Event('input', { bubbles: true })); }
+  function fmtText(ta, before, after) { fmtSelection(ta, before, after); ta.dispatchEvent(new Event('input', { bubbles: true })); }
   let dragHb = null, dragTab = -1;
   document.addEventListener('click', async e => {
     const c = e.target.closest && e.target.closest('[data-ho-copy]');
@@ -132,9 +130,9 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
     else if (act === 'toggle' && b) b.collapsed = !(b.collapsed === true);
     else if (act === 'img-clear' && b) b.previewUrl = '';
     else if (act === 'add-image') h.blocks.push({ id: hoId(), type: 'image', previewUrl: '' });
-    else if (act === 'sub-add' && b) b.subItems.push({ title: '', val: '', style: 'plain' });
+    else if (act === 'sub-add' && b) b.subItems.push(newSub());
     else if (act === 'sub-del' && b) b.subItems.splice(Number(el.dataset.si), 1);
-    else if (b) { const i = h.blocks.indexOf(b); if (act === 'del-block') h.blocks.splice(i, 1); else if (act === 'up' && i > 0) [h.blocks[i - 1], h.blocks[i]] = [h.blocks[i], h.blocks[i - 1]]; else if (act === 'down' && i < h.blocks.length - 1) [h.blocks[i + 1], h.blocks[i]] = [h.blocks[i], h.blocks[i + 1]]; }
+    else if (b) { const i = h.blocks.indexOf(b); if (act === 'del-block') h.blocks.splice(i, 1); else if (act === 'up') moveItem(h.blocks, i, -1); else if (act === 'down') moveItem(h.blocks, i, 1); }
     renderHoPanel(); changed();
   });
   document.addEventListener('input', e => {
@@ -142,7 +140,7 @@ function renderHoPreview() {   // そのHOのDM風プレビュー。コピー・
     if (k === 'name') { cur().name = v; renderHoTabs(); }   // タブ名にすぐ反映
     else if (k === 'tagline') cur().tagline = v;
     else if (b && k === 'key') b.keyName = v; else if (b && k === 'text') b.val = v; else if (b && k === 'decor') b.decorStyle = v; else if (b && k === 'url') b.previewUrl = v.trim();
-    else if (k === 'sub-title' && sub()) sub().title = v; else if (k === 'sub-text' && sub()) sub().val = v; else if (k === 'sub-style' && sub()) sub().style = v;
+    else if (k.startsWith('sub-') && sub()) sub()[SUB_FIELD[k.slice(4)]] = v;
     changed();
   });
   document.addEventListener('change', async e => {

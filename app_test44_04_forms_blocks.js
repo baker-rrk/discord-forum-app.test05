@@ -1,4 +1,4 @@
-/* app_test41_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
+/* app_test44_04_forms_blocks.js — モーダル・入力フォーム・ブロック編集・プレビュー
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function openPostStatusDialog(scId) {
@@ -222,18 +222,11 @@
   }
 
   function getDecorSelectHtml(idx, decorStyle) {
-    return `<select style="background:var(--dc-bg-primary); border:1px solid var(--dc-border); color:#fff; padding:4px; font-size:0.8rem; border-radius:3px; outline:none;" data-bc="decor" data-bid="${idx}">
-      <option value="default" ${decorStyle === 'default' ? 'selected' : ''}>通常</option>
-      <option value="simple" ${decorStyle === 'simple' ? 'selected' : ''}>シンプル</option>
-      <option value="fancy" ${decorStyle === 'fancy' ? 'selected' : ''}>ファンシー</option>
-      <option value="codeblock" ${decorStyle === 'codeblock' ? 'selected' : ''}>コードブロック</option>
-      <option value="none" ${decorStyle === 'none' ? 'selected' : ''}>装飾なし</option>
-    </select>`;
+    return `<select style="background:var(--dc-bg-primary); border:1px solid var(--dc-border); color:#fff; padding:4px; font-size:0.8rem; border-radius:3px; outline:none;" data-bc="decor" data-bid="${idx}">${decorOptionsHtml(decorStyle)}</select>`;
   }
 
-  function subItemsHtml(b) {   // 「＋ サブ項目を追加」で増える、サブタイトル＋本文のペア（普段は非表示で、従来どおりのシンプルなUI）
-    const rows = (b.subItems || []).map((s, i) => `<div class="sub-item"><div class="sub-item-head"><input type="text" data-bi="sub-title" data-bid="${b.id}" data-i="${i}" value="${escapeHTML(s.title)}" placeholder="サブタイトル（小見出し）"><select data-bi="sub-style" data-bid="${b.id}" data-i="${i}" title="サブタイトルの表記（引用の外に出ます）"><option value="plain" ${s.style === 'bold' ? '' : 'selected'}>通常文字</option><option value="bold" ${s.style === 'bold' ? 'selected' : ''}>太字</option></select><button type="button" class="btn-sort btn-danger" data-ba="sub-del" data-bid="${b.id}" data-i="${i}">✕ 削除</button></div><textarea data-bi="sub-text" data-bid="${b.id}" data-i="${i}" placeholder="サブ項目の本文">${escapeHTML(s.val)}</textarea></div>`).join('');
-    return `${rows}<button type="button" class="btn btn-secondary btn-sm sub-add" data-ba="sub-add" data-bid="${b.id}">＋ サブ項目を追加</button>`;
+  function subItemsHtml(b) {   // 公開情報側：共通のサブ項目UI（subItemsEditorHtml）に、公開情報用の操作属性を渡す
+    return subItemsEditorHtml(b.subItems, (k, i) => k === 'add' ? `data-ba="sub-add" data-bid="${b.id}"` : k === 'del' ? `data-ba="sub-del" data-bid="${b.id}" data-i="${i}"` : `data-bi="sub-${k}" data-bid="${b.id}" data-i="${i}"`);
   }
   function renderBlockUI() {
     blockOrder = blockOrder.filter(b => b && typeof b === 'object'); blockOrder.forEach(b => sanitizeBlock(b)); tagSummaryFields(blockOrder);
@@ -346,24 +339,33 @@
   function clearImageFile(idx) { revokeFileUrl(blockOrder[idx].file); blockOrder[idx].file = null; blockOrder[idx].previewUrl = ''; renderBlockUI(); renderPreview(); }
   function toggleBlockCollapse(idx) { blockOrder[idx].collapsed = !blockOrder[idx].collapsed; renderBlockUI(); }
   function updateBlockValue(idx, val) { blockOrder[idx].val = val; renderPreview(); }
-  function moveBlock(idx, dir) { const newIdx = idx + dir; if (newIdx < 0 || newIdx >= blockOrder.length) return; const t = blockOrder.splice(idx, 1)[0]; blockOrder.splice(newIdx, 0, t); renderBlockUI(); renderPreview(); }
+  function moveBlock(idx, dir) { if (!moveItem(blockOrder, idx, dir)) return; renderBlockUI(); renderPreview(); }
   function deleteCustomBlock(idx) { revokeFileUrl(blockOrder[idx] && blockOrder[idx].file); blockOrder.splice(idx, 1); renderBlockUI(); renderPreview(); }
-  function insertFmt(id, b, a = '') { const el = document.getElementById(id); if(!el) return; const s = el.selectionStart, e = el.selectionEnd, v = el.value; el.value = v.substring(0,s) + b + v.substring(s,e) + a + v.substring(e); const idx = blockOrder.findIndex(x=>x.id===id); if(idx!==-1) blockOrder[idx].val = el.value; renderPreview(); }
+  function insertFmt(id, b, a = '') { const el = document.getElementById(id); if (!el) return; fmtSelection(el, b, a); const idx = blockOrder.findIndex(x => x.id === id); if (idx !== -1) blockOrder[idx].val = el.value; renderPreview(); }
 
   // 項目ブロック1つ分の出力：見出し → 本文（装飾スタイルに沿う）→ サブ項目（サブタイトル行は引用の外／通常文字か太字、本文は引用）
+  // ----- 装飾（見出し・本文の各行）。組み込みの5種類と、設定で作った自分のフォーマットを、ここで一括して扱う -----
+  const customFormat = style => ((typeof appState !== 'undefined' && appState.formats) || []).find(f => f.id === style) || null;
+  function decorHead(t, style, cfg) {
+    if (!t) return '';
+    const cf = customFormat(style); if (cf) return cf.headPre + t + cf.headPost;
+    return style === 'simple' ? cfg.simpleH1 + t : style === 'fancy' ? cfg.fancyH1 + t + cfg.fancyH1 : cfg.h1 + t;
+  }
+  function decorBody(lines, style, cfg) {
+    const cf = customFormat(style);
+    if (cf) { const s = lines.map(l => l ? cf.linePre + l : (cf.linePre.trim() ? cf.linePre + '\u200B' : '')).join('\n'); return cf.wrap === 'code' ? '```\n' + s + '\n```' : s; }
+    if (style === 'codeblock') return '```\n' + lines.join('\n') + '\n```';
+    if (style === 'simple') return lines.map(l => l ? cfg.simpleList + l : cfg.simpleList).join('\n');
+    if (style === 'fancy') return lines.map(l => l ? cfg.fancyList + l : cfg.fancyList).join('\n');
+    if (style === 'none') return lines.join('\n');
+    return lines.map(l => l ? cfg.quote + l : cfg.quote + '\u200B').join('\n');   // 空行は見えない文字を入れて引用を途切れさせない
+  }
   function formatItemSection(title, val, subs, style, cfg) {
     const t = (title || '').trim(); style = style || 'default';
     const mainLines = (val && val.trim()) ? val.split('\n') : [];
     const subList = (subs || []).filter(s => (s.title && s.title.trim()) || (s.val && s.val.trim()));
     if (!mainLines.length && !subList.length) return '';
-    const body = lines => {
-      if (style === 'codeblock') return '```\n' + lines.join('\n') + '\n```';
-      if (style === 'simple') return lines.map(l => l ? cfg.simpleList + l : cfg.simpleList).join('\n');
-      if (style === 'fancy') return lines.map(l => l ? cfg.fancyList + l : cfg.fancyList).join('\n');
-      if (style === 'none') return lines.join('\n');
-      return lines.map(l => l ? cfg.quote + l : cfg.quote + '\u200B').join('\n');   // 空行は見えない文字を入れて引用を途切れさせない
-    };
-    const head = !t ? '' : style === 'simple' ? cfg.simpleH1 + t : style === 'fancy' ? cfg.fancyH1 + t + cfg.fancyH1 : cfg.h1 + t;
+    const body = lines => decorBody(lines, style, cfg), head = decorHead(t, style, cfg);
     const parts = [];
     if (mainLines.length) parts.push(body(mainLines));
     subList.forEach(s => { const st = (s.title || '').trim(), line = st ? (s.style === 'bold' ? `**${st}**` : st) : '', sb = (s.val && s.val.trim()) ? body(s.val.split('\n')) : ''; parts.push([line, sb].filter(Boolean).join('\n')); });
@@ -438,20 +440,8 @@
       }
 
       if (contentLines.length > 0) {
-        let sec = "";
-        let style = b.decorStyle || 'default';
-
-        if (style === 'codeblock') {
-          sec = `${hasTitle ? `${cfg.h1}${blockTitle}\n` : ''}\`\`\`\n${contentLines.join('\n')}\n\`\`\``;
-        } else if (style === 'simple') {
-          sec = (hasTitle ? `${cfg.simpleH1}${blockTitle}\n` : '') + contentLines.map(l => l ? `${cfg.simpleList}${l}` : cfg.simpleList).join('\n');
-        } else if (style === 'fancy') {
-          sec = (hasTitle ? `${cfg.fancyH1}${blockTitle}${cfg.fancyH1}\n` : '') + contentLines.map(l => l ? `${cfg.fancyList}${l}` : cfg.fancyList).join('\n');
-        } else if (style === 'none') {
-          sec = (hasTitle ? `${cfg.h1}${blockTitle}\n` : '') + contentLines.join('\n');
-        } else {
-          sec = (hasTitle ? `${cfg.h1}${blockTitle}\n` : '') + contentLines.map(l => l ? `${cfg.quote}${l}` : `${cfg.quote}\u200B`).join('\n'); // 空行は見えない文字(ゼロ幅スペース)を入れて引用を途切れさせない
-        }
+        const style = b.decorStyle || 'default';
+        const sec = (hasTitle ? decorHead(blockTitle, style, cfg) + '\n' : '') + decorBody(contentLines, style, cfg);
         chunks[chunkIdx].textParts.push(sec);
       }
     });
@@ -520,6 +510,7 @@
       document.getElementById('cfg' + k.charAt(0).toUpperCase() + k.slice(1)).value = c[k] !== undefined ? c[k] : defaultFormatConfig[k];
     });
     appState.formatConfig.quote = defaultFormatConfig.quote; // 固定
+    if (typeof renderFormatList === 'function') renderFormatList();   // 自分のフォーマットの一覧
   }
   function loadSettingsToUI() { document.getElementById('botName').value = appState.botName || "概要投稿Bot"; renderChannelConfigList(); }
 

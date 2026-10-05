@@ -313,3 +313,15 @@ input, textarea, select, button { font-family: inherit; }
   .app-actions .btn { white-space: nowrap; padding: 4px 8px !important; font-size: 0.78rem !important; flex: 0 0 auto; }
   #login-status, #sync-status { font-size: 0.72rem !important; white-space: nowrap; }
 }
+/* 設定画面：余白を詰めてすっきり */
+#settingsTab .card { padding: 12px 16px; margin-bottom: 12px; } #settingsTab .card-title { margin-bottom: 8px; font-size: 0.95rem; }
+.bot-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.bot-avatar { width: 56px; height: 56px; padding: 0 !important; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; flex: 0 0 auto; font-size: 1.3rem; }
+.bot-avatar img { width: 100%; height: 100%; max-height: none !important; object-fit: cover; margin: 0; }
+.set-note { font-size: 0.75rem; color: var(--dc-text-muted); margin-top: 8px; line-height: 1.6; } .set-note summary { cursor: pointer; } .set-note p { margin: 6px 0 0; }
+.fmt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 12px; align-items: end; } .fmt-grid label { font-size: 0.72rem; margin-bottom: 2px; display: block; }
+.fmt-sub { margin: 12px 0 6px; font-size: 0.85rem; font-weight: bold; } .fmt-sub span { font-weight: normal; font-size: 0.75rem; color: var(--dc-text-muted); }
+.fmt-row { border: 1px solid var(--dc-border); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: var(--dc-bg-primary); }
+.fmt-row-head { display: flex; gap: 8px; margin-bottom: 6px; } .fmt-row-head input { flex: 1; font-weight: bold; }
+.fmt-check { display: flex !important; align-items: center; gap: 6px; font-size: 0.8rem !important; } .fmt-check input { width: auto; }
+.fmt-sample { margin: 8px 0 0; padding: 6px 8px; background: rgba(0,0,0,.25); border-radius: 4px; font-size: 0.78rem; white-space: pre-wrap; color: #dbdee1; } .fmt-empty { font-size: 0.78rem; color: var(--dc-text-muted); margin-bottom: 8px; }
