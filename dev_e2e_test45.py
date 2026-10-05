@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test44.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test45.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -403,6 +403,19 @@ async def main():
         txt=await pg.evaluate("buildPostData()[0].text")
         ok('> a\n> b' in txt,'T24 使っていたフォーマットを削除すると、そのブロックは「通常」の表示に戻る',txt)
         ok(not pg.errs,'T24 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T25 クラウドから統合されたデータ（細工された値）が、画面のHTMLに入らない
+        pg=await newpage(b,None)
+        r=await pg.evaluate("""async()=>{appState.formats=[{id:'fmt_keep',name:'残るべき',headPre:'## ',headPost:'',linePre:'> ',wrap:'none'}];
+          await applyMergedState({scenarios:[{id:'s1',title:'<img src=x onerror=window.__p1=1>',fullBlockData:'x',secretHOs:'y'}],channels:[{id:'c1',name:'<b>x</b>',webhookUrl:'u',tags:[{name:'<i>t</i>',id:'1'}]}],history:[{date:'d',title:'<u>h</u>',channels:'c'}],deletedScenarios:{},
+            formats:[{id:'fmt_x" onmouseover="window.__p2=1" q="',name:'<s>f</s>',headPre:5,headPost:null,linePre:undefined,wrap:'code'},{id:'bad',name:'z'}]});
+          const row=document.querySelector('#customFormatList [data-fid]');
+          return {ids:appState.formats.map(f=>f.id),attrs:row?[...row.attributes].map(a=>a.name).join(','):'none',p1:window.__p1,p2:window.__p2,t:appState.formats.map(f=>typeof f.headPre+typeof f.linePre).join()}}""")
+        ok(r['attrs']=='class,data-fid' and r['p2'] is None and r['p1'] is None,'T25 クラウド統合経由の細工されたフォーマットIDでも、HTMLに余計な属性が入らない',r)
+        ok(len(r['ids'])==1 and r['ids'][0].startswith('fmt_x') and r['t']=='stringstring','T25 不正なフォーマット（IDが不正・型違い）は取り除かれるか、安全な形に直される',r)
+        ok(await pg.evaluate("appState.scenarios[0].title")=='<img src=x onerror=window.__p1=1>' and await pg.evaluate("document.querySelector('#dbCardContainer')?.innerHTML.includes('<img src=x')")==False,'T25 統合されたシナリオ名などは、文字として表示される（HTMLとして解釈されない）')
+        r2=await pg.evaluate("""async()=>{appState.formats=[{id:'fmt_keep',name:'残るべき',headPre:'',headPost:'',linePre:'',wrap:'none'}];await applyMergedState({scenarios:[],channels:[],history:[],deletedScenarios:{}});return appState.formats.map(f=>f.id).join()}""")
+        ok(r2=='fmt_keep','T25 統合結果にフォーマットが含まれないとき、端末のフォーマットは消えない',r2)
+        ok(not pg.errs,'T25 エラーなし',pg.errs[:2]); await pg.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

@@ -1,4 +1,4 @@
-/* app_test44_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
+/* app_test45_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function addChannelConfig() { appState.channels.push({ id: uid(), name: "新しいチャンネル", webhookUrl: "", tags: [] }); renderChannelConfigList(); saveState(); }
@@ -88,6 +88,8 @@
   function primeScenarioSigs() { scSigs.clear(); appState.scenarios.forEach(sc => { if (sc && sc.id) scSigs.set(sc.id, sigOf(sc)); }); }
   function stampScenarios() { appState.scenarios.forEach(sc => { if (!sc || !sc.id) return; const g = sigOf(sc); if (scSigs.get(sc.id) !== g) { scSigs.set(sc.id, g); sc.updatedAt = nowTs(); } }); }
   window.applyMergedState = async (m) => {   // クラウドとの統合結果を、画面を再読み込みせずに反映する
+    // クラウドから来たデータは、画面のHTMLに入る前に、必ず形を整える（細工された値による属性注入などを防ぐ）
+    m = sanitizeImported({ ...m, scenarios: Array.isArray(m.scenarios) ? m.scenarios : [], channels: Array.isArray(m.channels) ? m.channels : [], history: Array.isArray(m.history) ? m.history : [], formats: m.formats !== undefined ? m.formats : appState.formats }) || m;
     appState.scenarios = m.scenarios; appState.channels = m.channels; appState.history = m.history; appState.deletedScenarios = m.deletedScenarios; appState.deletedChannels = m.deletedChannels || appState.deletedChannels; appState.historyClearedAt = m.historyClearedAt || appState.historyClearedAt; appState.formats = m.formats || appState.formats; if (typeof renderFormatList === 'function') renderFormatList();
     ensureChannelIds(); appState.scenarios.forEach(x => { if (!x.id) x.id = uid(); }); appState.scenarios.forEach(normalizePosted);
     await hydrateRefs(appState); primeScenarioSigs();

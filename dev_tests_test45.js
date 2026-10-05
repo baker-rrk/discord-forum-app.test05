@@ -293,3 +293,8 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   e(fm.length===3&&fm[0].name==='5'&&fm[0].headPre===''&&fm[0].wrap==='code'&&fm.every(f=>/^fmt_[\w-]+$/.test(f.id))&&fm[2].wrap==='none'||fm.length>=1,'フォーマットのデータ整形（IDは fmt_＋安全な文字だけ。不正な値は直す）');
   e(env.isDecorStyle('fmt_ab-1')&&env.isDecorStyle('simple')&&!env.isDecorStyle('x')&&!env.isDecorStyle('fmt_a b'),'装飾スタイルの判定（組み込み、または fmt_ のID）');
 }
+
+{ // クラウドから統合したデータも、画面に出す前に形を整える
+  const app=loadApp(); const a=app.indexOf('window.applyMergedState'); const fn=app.slice(a,app.indexOf('\n  };',a)+5);
+  console.log((/m = sanitizeImported\(\{ \.\.\.m,/.test(fn)&&fn.indexOf('sanitizeImported')<fn.indexOf('appState.scenarios = m.scenarios')?'OK  ':'NG  ')+'統合結果（クラウド由来のデータ）は、状態に入れる前に sanitizeImported で整える');
+}
