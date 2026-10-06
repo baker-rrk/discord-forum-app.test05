@@ -1,4 +1,4 @@
-/* app_test45_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
+/* app_test46_01_state_model.js — 設定・定数、検索、ブロックのデータモデル、アプリ全体の状態
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
 /* Discord フォーラム概要自動投稿ツール — メインスクリプト（discord_forum_app_test24.html から読み込み）
@@ -8,7 +8,7 @@
 // 添付ファイル1件・1通あたりの上限（設定で変更可。サーバーのブースト状況でDiscordの上限が違うため）
 const maxAttachBytes = () => (Number(appState.maxAttachMB) > 0 ? Number(appState.maxAttachMB) : 9.5) * 1024 * 1024;
 function saveMaxAttach(v) { appState.maxAttachMB = Math.min(500, Math.max(1, Number(v) || 9.5)); saveState(true); }
-const APP_VERSION = 'test45';
+const APP_VERSION = 'test46';
 console.info('Discord forum tool', APP_VERSION);
 
 // ===== 予期しないエラーの見える化（黙って壊れないように。連続表示は3秒に1回まで） =====

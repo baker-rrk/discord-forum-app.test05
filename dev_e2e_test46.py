@@ -1,6 +1,6 @@
 # ブラウザでの自動テスト（開発用・本番には不要）。実際のChromiumでアプリを開き、画面を操作して確認します。
 # 準備: pip install playwright && playwright install chromium
-# 使い方: python dev_e2e_test45.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
+# 使い方: python dev_e2e_test46.py [HTML等のあるフォルダ]   （Discordへの通信は偽のレスポンスに差し替えるので、実際には送信されません）
 import asyncio,sys,json,re
 from playwright.async_api import async_playwright
 import os,glob,pathlib
@@ -416,6 +416,22 @@ async def main():
         r2=await pg.evaluate("""async()=>{appState.formats=[{id:'fmt_keep',name:'残るべき',headPre:'',headPost:'',linePre:'',wrap:'none'}];await applyMergedState({scenarios:[],channels:[],history:[],deletedScenarios:{}});return appState.formats.map(f=>f.id).join()}""")
         ok(r2=='fmt_keep','T25 統合結果にフォーマットが含まれないとき、端末のフォーマットは消えない',r2)
         ok(not pg.errs,'T25 エラーなし',pg.errs[:2]); await pg.context.close()
+        # T26 メインタブ：選択中の画面が色で分かる
+        pg=await newpage(b,None)
+        tabs=['postTab','databaseTab','historyTab','settingsTab']; cols=[]; ok_all=True; info=[]
+        for i,tb in enumerate(tabs):
+            await pg.locator(f'button[data-on-click="switchTab-{tb}-event"]').click(); await pg.wait_for_timeout(500)   # 色の切り替えアニメーションが終わるのを待つ
+            r=await pg.evaluate("""(tb)=>{const btns=[...document.querySelectorAll('.nav-tabs .tab-btn')],act=btns.filter(b=>b.classList.contains('active')),cs=getComputedStyle(act[0]);
+              const sec=getComputedStyle(document.getElementById(tb));const inactive=btns.filter(b=>!b.classList.contains('active')).map(b=>getComputedStyle(b).backgroundColor);
+              return {n:act.length,sel:act.map(b=>b.getAttribute('aria-selected')).join(),bg:cs.backgroundColor,weight:cs.fontWeight,top:sec.borderTopColor,topw:sec.borderTopWidth,inactive,before:getComputedStyle(act[0],'::before').content}}""",tb)
+            cols.append(r['bg']); info.append(r)
+            ok_all&=(r['n']==1 and r['sel']=='true' and r['bg']==r['top'] and r['topw']=='3px' and int(r['weight'])>=700 and all(c in('rgba(0, 0, 0, 0)','transparent') for c in r['inactive']) and '●' in r['before'])
+        ok(ok_all,'T26 選択中のタブは1つだけ。色つき・太字・●つきで、ほかは無色。表示中の画面の上端にも同じ色の線が出る',info[0] if not ok_all else '')
+        ok(len(set(cols))==4,'T26 画面ごとにタブの色が違う（投稿作成／シナリオDB／履歴／設定）',cols)
+        pg2=await newpage(b,None); await pg2.locator('button[data-on-click="switchTab-historyTab-event"]').click(); await pg2.wait_for_timeout(500)
+        fg=await pg2.evaluate("(()=>{const a=document.querySelector('.nav-tabs .tab-btn.active'),cs=getComputedStyle(a);const p=s=>s.match(/\\d+/g).slice(0,3).map(Number);const L=c=>{const[r,g,b]=p(c).map(v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)});return 0.2126*r+0.7152*g+0.0722*b};const l1=L(cs.color),l2=L(cs.backgroundColor);return (Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05)})()")
+        ok(fg>=4.5,'T26 選択中のタブの文字は、背景に対して十分なコントラストがある（黄色のタブは濃い文字）',round(fg,2))
+        ok(not pg.errs and not pg2.errs,'T26 エラーなし',(pg.errs+pg2.errs)[:2]); await pg.context.close(); await pg2.context.close()
         await b.close()
     print(f'\n== {sum(res)}/{len(res)} passed ==')
 asyncio.run(main())

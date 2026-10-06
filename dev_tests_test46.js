@@ -298,3 +298,8 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   const app=loadApp(); const a=app.indexOf('window.applyMergedState'); const fn=app.slice(a,app.indexOf('\n  };',a)+5);
   console.log((/m = sanitizeImported\(\{ \.\.\.m,/.test(fn)&&fn.indexOf('sanitizeImported')<fn.indexOf('appState.scenarios = m.scenarios')?'OK  ':'NG  ')+'統合結果（クラウド由来のデータ）は、状態に入れる前に sanitizeImported で整える');
 }
+
+{ // メインタブの選択表示：ボタンは data-tab で特定する（操作の名前の文字列には頼らない）
+  const app=loadApp(), html=fs.readFileSync(HTML,'utf8');
+  console.log((/b\.dataset\.tab === tabId/.test(app)&&['postTab','databaseTab','historyTab','settingsTab'].every(t=>html.includes('data-tab="'+t+'"'))?'OK  ':'NG  ')+'メインタブのボタンは data-tab で特定される（操作名を短くしても、選択中の色が移る）');
+}

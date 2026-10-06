@@ -1,4 +1,4 @@
-/* app_test45_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
+/* app_test46_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   let _dlgChain = Promise.resolve();
@@ -190,7 +190,7 @@ function mdToHtml(text) {   // プレビュー用の簡易Markdown（見出し�
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('active'); el.setAttribute('aria-selected', 'false'); });
     document.getElementById(tabId).classList.add('active');
-    const tb = [...document.querySelectorAll('.tab-btn')].find(b => (b.getAttribute('data-on-click') || '').includes("'" + tabId + "'")); if (tb) { tb.classList.add('active'); tb.setAttribute('aria-selected', 'true'); }
+    const tb = [...document.querySelectorAll('.tab-btn')].find(b => b.dataset.tab === tabId); if (tb) { tb.classList.add('active'); tb.setAttribute('aria-selected', 'true'); }
   }
 
   function setDBViewMode(mode) {
