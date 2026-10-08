@@ -1,8 +1,26 @@
-/* app_test46_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
+/* app_test48_03_ui_basics.js — ダイアログ・トースト・共通処理・初期化・DB一覧
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   let _dlgChain = Promise.resolve();
   // confirm() の代わり。true/false を返す（await して使う）。strict:true は Esc・外側クリックで閉じない（重要な選択用）
+  // 3つ以上の選択肢があるダイアログ。buttons: [{ label, value, kind: 'primary' | 'danger' | '' }]。Esc・外側クリックは null（キャンセル）
+  function appChoice(message, buttons, opts = {}) {
+    const run = () => new Promise(resolve => {
+      const ov = document.createElement('div'); ov.className = 'app-dialog-overlay'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+      const box = document.createElement('div'); box.className = 'app-dialog';
+      if (opts.title) { const t = document.createElement('div'); t.className = 'app-dialog-title'; t.textContent = opts.title; box.appendChild(t); }
+      const m = document.createElement('div'); m.className = 'app-dialog-msg'; m.style.whiteSpace = 'pre-wrap'; m.textContent = String(message); box.appendChild(m);
+      const row = document.createElement('div'); row.className = 'app-dialog-actions'; row.style.flexWrap = 'wrap';
+      const prev = document.activeElement;
+      const done = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); if (prev && prev.focus) { try { prev.focus(); } catch (e) { logSoft('appChoice', e); } } resolve(v); };
+      const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); done(null); } };
+      buttons.forEach(bt => { const el = document.createElement('button'); el.type = 'button'; el.className = 'app-dialog-btn ' + (bt.kind || ''); el.textContent = bt.label; el.onclick = () => done(bt.value); row.appendChild(el); });
+      box.appendChild(row); ov.appendChild(box); document.body.appendChild(ov); document.addEventListener('keydown', onKey, true);
+      ov.addEventListener('mousedown', e => { if (e.target === ov) done(null); });
+      const first = row.querySelector('.primary') || row.firstChild; if (first) first.focus();
+    });
+    const p = _dlgChain.then(run); _dlgChain = p.catch(e => logSoft('async', e)); return p;
+  }
   function appConfirm(message, opts = {}) {
     const run = () => new Promise(resolve => {
       const ov = document.createElement('div'); ov.className = 'app-dialog-overlay'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');

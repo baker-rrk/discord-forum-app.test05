@@ -1,4 +1,4 @@
-/* app_test46_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
+/* app_test48_05_channels_save_sync.js — チャンネル設定・Webhookテスト・保存・クラウド連携の受け口・シナリオ操作
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   function addChannelConfig() { appState.channels.push({ id: uid(), name: "新しいチャンネル", webhookUrl: "", tags: [] }); renderChannelConfigList(); saveState(); }
@@ -115,14 +115,21 @@
   function importData(e) {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(evt) {
-      try {
-        const parsed = sanitizeImported(JSON.parse(evt.target.result));
-        if (parsed) {
-                    (async () => { e.target.value = ''; if (!(await appConfirm('現在のデータをこのファイルの内容で置き換えます（現在のデータはバックアップとして残ります）。', { okText: '置き換える', danger: true }))) return; const old = await window.idbGetRaw('state'); if (old) await window.idbSetRaw('state_backup', old); await window.idbSetRaw('state', JSON.stringify(parsed)); try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (e) { logSoft('importData', e); } toast("✅ 設定データを復元しました。"); setTimeout(() => location.reload(), 1200); })();
-        } else toast("❌ ファイルの形式が異なります。");
-      } catch (err) { toast("❌ エラー: 読み込めませんでした"); }
-    };
+    reader.onload = evt => { (async () => {
+      let parsed; try { parsed = sanitizeImported(JSON.parse(evt.target.result)); } catch (err) { e.target.value = ''; return toast('❌ エラー: 読み込めませんでした'); }
+      e.target.value = ''; if (!parsed) return toast('❌ ファイルの形式が異なります。');
+      const base = window.getAppStateForSync(), { merged, summary: S } = mergeBackupInto(base, parsed);
+      const choice = await appChoice('「' + file.name + '」の読み込み方を選んでください。\n\n【統合（追加・更新）】今のデータはそのままに、ファイルの内容を追加・更新します。\n' + mergeSummaryText(S).replace(/^/gm, '　') + '\n※設定（Bot名・アイコン・記号など）は今のままです。\n\n【置き換える】今のデータをファイルの内容で置き換えます。\n（どちらも、今のデータはバックアップとして残ります）',
+        [{ label: '統合（追加・更新）', value: 'merge', kind: 'primary' }, { label: '置き換える', value: 'replace', kind: 'danger' }, { label: 'キャンセル', value: null }], { title: 'JSONの読み込み' });
+      if (!choice) return;
+      const old = await window.idbGetRaw('state'); if (old) await window.idbSetRaw('state_backup', old);
+      if (choice === 'merge') {
+        await window.applyMergedState({ scenarios: merged.scenarios, channels: merged.channels, history: merged.history, deletedScenarios: merged.deletedScenarios, deletedChannels: merged.deletedChannels, historyClearedAt: base.historyClearedAt, formats: merged.formats });
+        return toast('✅ 統合しました（シナリオ 追加' + S.scenAdded + '・更新' + S.scenUpdated + '／チャンネル 追加' + S.chAdded + '・更新' + S.chUpdated + '）');
+      }
+      await window.idbSetRaw('state', JSON.stringify(parsed)); try { localStorage.setItem('discord_forum_tool_dirty', '1'); } catch (x) { logSoft('importData', x); }
+      toast('✅ 設定データを復元しました。'); setTimeout(() => location.reload(), 1200);
+    })(); };
     reader.readAsText(file);
   }
 
@@ -161,7 +168,7 @@
           <div class="scenario-card-footer">${isP ? `<span class="badge badge-posted badge-click" data-act="status" data-id="${escapeHTML(sc.id)}" title="クリックで投稿状態を変更">✓ 投稿済 (${sc.postedChannels.length}) ✎</span>` : `<span class="badge badge-unposted badge-click" data-act="status" data-id="${escapeHTML(sc.id)}" title="クリックで投稿状態を変更">未投稿 ✎</span>`}
             <div style="display:flex; gap:4px;"><button class="btn-sort" data-act="load" data-id="${escapeHTML(sc.id)}" style="padding:4px 8px; font-weight:bold;">📤 呼出</button><button class="btn-sort" data-act="edit" data-id="${escapeHTML(sc.id)}" style="padding:4px 8px;">✏️ 編集</button><button class="btn-sort btn-danger" data-act="del" data-id="${escapeHTML(sc.id)}" style="padding:4px 8px;">🗑️</button></div>
           </div></div>`;
-        container.appendChild(card);
+        card.dataset.sid = sc.id; container.appendChild(card);
       });
     } else {
       document.getElementById('dbCardContainer').style.display = 'none'; const tbody = document.getElementById('dbTableBody'); document.getElementById('dbTableContainer').style.display = 'block'; tbody.innerHTML = ""; const rows = [];
@@ -172,7 +179,7 @@
           return `<span class="badge" title="${escapeHTML(nm + (tg.length ? ' / タグ: ' + tg.join(', ') : ''))}" style="background:#4e5058; display:inline-flex; align-items:center;">${escapeHTML(nm)}${tg.length ? `<span class="status-tags">#${escapeHTML(tg.join(' #'))}</span>` : ''}<span style="margin-left:6px; cursor:pointer; color:var(--dc-red);" data-act="unpost" data-id="${escapeHTML(sc.id)}" data-ci="${ci}" title="未投稿にする">✕</span></span>`;
         }).join('') : '';
         const sid = escapeHTML(sc.id);
-        rows.push(`<tr><td>${sc.imageUrl ? `<img ${imgAttr(sc.imageUrl)} class="db-thumb" loading="lazy">` : `<div class="db-thumb-placeholder">📁</div>`}</td>
+        rows.push(`<tr data-sid="${sid}"><td>${sc.imageUrl ? `<img ${imgAttr(sc.imageUrl)} class="db-thumb" loading="lazy">` : `<div class="db-thumb-placeholder">📁</div>`}</td>
           <td class="db-title"><span class="fav-star${sc.favorite ? ' on' : ''}" data-act="fav" data-id="${escapeHTML(sc.id)}" role="button" tabindex="0" aria-pressed="${!!sc.favorite}" title="${sc.favorite ? 'お気に入りを解除' : 'お気に入りに追加'}">${sc.favorite ? '★' : '☆'}</span>${escapeHTML(sc.title)}${safeUrl(sc.shopUrl) ? `<br><a href="${escapeHTML(safeUrl(sc.shopUrl))}" target="_blank" rel="noopener noreferrer" style="font-size:0.75rem; color:var(--dc-accent); font-weight:normal;">🔗 ショップ</a>` : ''}</td>
           <td>${escapeHTML(sc.system || '-')}</td><td>${escapeHTML(sc.playerCount || '-')} / ${escapeHTML(sc.playTime || '-')}</td>
           <td>${isP ? `<span class="badge badge-posted badge-click" data-act="status" data-id="${sid}" title="クリックで投稿状態を変更">✓ 投稿済 ✎</span>` : `<span class="badge badge-unposted badge-click" data-act="status" data-id="${sid}" title="クリックで投稿状態を変更">未投稿 ✎</span>`}</td>

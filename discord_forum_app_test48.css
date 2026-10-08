@@ -336,3 +336,16 @@ input, textarea, select, button { font-family: inherit; }
 .nav-tabs .tab-btn.active::before { content: '● '; font-size: 0.7em; vertical-align: 2px; }
 .tab-content.active { border-top: 3px solid var(--tab-color, var(--dc-accent)); padding-top: 14px; }
 #postTab.active { --tab-color: #5865f2; } #databaseTab.active { --tab-color: #23a55a; } #historyTab.active { --tab-color: #f0b232; } #settingsTab.active { --tab-color: #9b59b6; }
+/* シナリオウィンドウ（シナリオDB）：大きさは従来の編集画面（.modal-card）のまま。プレビュー／編集を同じウィンドウで切り替える */
+.scenario-window { padding: 14px 18px 18px; }
+.sw-head { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; position: sticky; top: -14px; z-index: 5; background: var(--dc-bg-secondary); padding: 8px 0; border-bottom: 1px solid var(--dc-border); }
+.sw-title { flex: 1; font-weight: bold; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sw-modes { display: flex; } .sw-modes button { padding: 6px 12px; border: 1px solid var(--dc-border); background: transparent; color: var(--dc-text-muted); cursor: pointer; font-size: 0.85rem; }
+.sw-modes button:first-child { border-radius: 6px 0 0 6px; } .sw-modes button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+.sw-modes button.active { background: #5865f2; border-color: #5865f2; color: #fff; font-weight: bold; }
+#swTabs .ho-tabs { margin-bottom: 10px; }
+.scenario-window .preview-tools { display: none; } .scenario-window .preview-area, .scenario-window .discord-preview-box { position: static; max-width: none; }
+.sw-preview #swTabs .ho-tab.add { display: none; }   /* プレビュー中はHOを増やせない */
+.sw-editing #postForm > .card:first-child, .sw-editing #submitBtn, .sw-editing #statusMsg { display: none !important; }   /* 投稿専用の部分（投稿先・タグ・投稿ボタン）は編集では使わない */
+.scenario-window #postForm .card { margin-bottom: 12px; }
+.scenario-card[data-sid], #dbTableBody tr[data-sid] { cursor: pointer; } .scenario-card[data-sid]:hover { outline: 2px solid #23a55a; } #dbTableBody tr[data-sid]:hover { background: rgba(35,165,90,.12); }

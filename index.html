@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Discord フォーラム概要自動投稿ツール</title>
-  <link rel="stylesheet" href="discord_forum_app_test46.css">
+  <link rel="stylesheet" href="discord_forum_app_test48.css">
 </head>
 <body>
 
@@ -278,46 +278,17 @@
 <!-- ダイレクト編集モーダル -->
 <!-- ダイレクト編集モーダル -->
 <div id="editScenarioModal" class="modal-overlay">
-  <div class="modal-card">
-    <div class="card-title">✏️ シナリオ情報の直接編集<button type="button" class="btn-sort" data-on-click="closeEditScenarioModal">✕</button></div>
-    <form data-on-submit="handleEditScenarioSubmit-event">
-      <input type="hidden" id="editIndex">
-      <div class="form-group"><label>シナリオタイトル<span class="req">*</span></label><input type="text" id="eTitle" required></div>
-      <div class="grid-2">
-        <div class="form-group"><label>システム</label><input type="text" id="eSystem"></div>
-        <div class="form-group"><label>ショップURL</label><input type="url" id="eShopUrl"></div>
+    <div class="modal-card scenario-window sw-preview">
+      <div class="sw-head">
+        <div class="sw-title" id="swTitle">シナリオ</div>
+        <div class="sw-modes"><button type="button" id="swModePreview" data-sw="preview">👁 プレビュー</button><button type="button" id="swModeEdit" data-sw="edit">✏️ 編集</button></div>
+        <button type="button" class="btn-sort" id="swSave" data-sw="save" style="display:none;">💾 保存して閉じる</button>
+        <button type="button" class="btn-sort" data-sw="close" title="閉じる（Esc）">✕</button>
       </div>
-      <div class="grid-2">
-        <div class="form-group"><label>プレイ人数</label><textarea id="ePlayerCount" class="short-input"></textarea></div>
-        <div class="form-group"><label>プレイ時間</label><textarea id="ePlayTime" class="short-input"></textarea></div>
-      </div>
-      <div class="grid-3">
-        <div class="form-group"><label>必須技能</label><textarea id="eReqSkills" class="short-input"></textarea></div>
-        <div class="form-group"><label>推奨技能</label><textarea id="eRecSkills" class="short-input"></textarea></div>
-        <div class="form-group"><label>準推奨技能</label><textarea id="eSemiRecSkills" class="short-input"></textarea></div>
-      </div>
-      <div class="grid-2">
-        <div class="form-group"><label>ロスト率</label><textarea id="eLostRate" class="short-input"></textarea></div>
-        <div class="form-group"><label>後遺症</label><textarea id="eAftereffect" class="short-input"></textarea></div>
-      </div>
-      <div class="form-group">
-        <label>サムネイル画像 (ドラッグ＆ドロップ または URL指定)</label>
-        <div class="drop-zone" id="eDropZone" data-on-click="document-getElementById-eFileInput-click" data-on-dragover="handleDragOver-event" data-on-dragleave="handleDragLeave-event" data-on-drop="handleEditImageDrop-event">
-          <span id="eDropText">📷 画像ファイルをここにドロップ または クリックして選択</span>
-          <input type="file" id="eFileInput" accept="image/*" style="display:none;" data-on-change="handleEditImageSelect-event">
-        </div>
-        <input type="text" id="eImageUrl" placeholder="https://... または画像をドロップ" style="margin-top:6px;">
-        <button type="button" class="btn btn-secondary btn-danger" data-on-click="clearEditScenarioImage" style="margin-top:6px;">🗑️ 画像を削除</button>
-      </div>
-      <div class="form-group"><label>あらすじ・トレーラー</label><textarea id="eTrailer"></textarea></div>
-      <div class="form-group"><label>注意事項・備考</label><textarea id="eNotes"></textarea></div>
-      <div class="actions-right">
-        <button type="button" class="btn btn-secondary btn-md" data-on-click="closeEditScenarioModal">キャンセル</button>
-        <button type="submit" class="btn btn-success btn-md">💾 変更を保存</button>
-      </div>
-    </form>
+      <div id="swTabs"></div>
+      <div id="swBody"></div>
+    </div>
   </div>
-</div>
 
 <!-- 新規シナリオ手動追加 モーダル -->
 <div id="addScenarioModal" class="modal-overlay">
@@ -429,18 +400,19 @@
   </div>
 </div>
 
-<script src="app_test46_00_block_common.js"></script>
-<script src="app_test46_01_state_model.js"></script>
-<script src="app_test46_02_storage_images.js"></script>
-<script src="app_test46_03_ui_basics.js"></script>
-<script src="app_test46_04_forms_blocks.js"></script>
-<script src="app_test46_05_channels_save_sync.js"></script>
-<script src="app_test46_06_post.js"></script>
-<script src="app_test46_07_boot.js"></script>
-<script src="app_test46_08_events.js"></script>
-<script src="app_test46_09_actions.js"></script>
-<script src="app_test46_10_secret_ho.js"></script>
-<script src="app_test46_11_custom_formats.js"></script>
+<script src="app_test48_00_block_common.js"></script>
+<script src="app_test48_01_state_model.js"></script>
+<script src="app_test48_02_storage_images.js"></script>
+<script src="app_test48_03_ui_basics.js"></script>
+<script src="app_test48_04_forms_blocks.js"></script>
+<script src="app_test48_05_channels_save_sync.js"></script>
+<script src="app_test48_06_post.js"></script>
+<script src="app_test48_07_boot.js"></script>
+<script src="app_test48_08_events.js"></script>
+<script src="app_test48_09_actions.js"></script>
+<script src="app_test48_10_secret_ho.js"></script>
+<script src="app_test48_11_custom_formats.js"></script>
+<script src="app_test48_12_scenario_window.js"></script>
 
 
 <script type="module">

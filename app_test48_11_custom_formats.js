@@ -1,4 +1,4 @@
-/* app_test46_11_custom_formats.js — 自分で追加・設定できるフォーマット
+/* app_test48_11_custom_formats.js — 自分で追加・設定できるフォーマット
  * 設定画面で、名前・見出しの前後・本文の各行の先頭・コードブロックで囲むか、を自由に決められる。作ったフォーマットは appState.formats に保存され、
  * 公開情報・HOの両方のブロックの「装飾」プルダウンに「🎨 名前」として出る（出力は decorHead / decorBody が組み立てる）。 */
 const newFormatId = () => 'fmt_' + Math.random().toString(36).slice(2, 8);

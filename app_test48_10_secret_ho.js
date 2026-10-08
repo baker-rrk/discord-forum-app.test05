@@ -1,4 +1,4 @@
-/* app_test46_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
+/* app_test48_10_secret_ho.js — 秘匿HO（サブタブ・項目ブロック・DM風プレビュー）
  * 各HOは { name, tagline, blocks }。blocks は公開情報と同じ「項目ブロック」{ type:'item', keyName, val, decorStyle, subItems } と画像ブロック { type:'image', previewUrl }。
  * 出力の1行目は「# HO名：__tagline__」（tagline が空なら見出し行なし）。HOの内容はDiscordへは送信されません（DMへ手動で貼る下書き）。 */
 let secretHOs = [], activeHO = -1;

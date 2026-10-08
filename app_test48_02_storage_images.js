@@ -1,4 +1,4 @@
-/* app_test46_02_storage_images.js — 画像の保存(IndexedDB)・直列化・画像の遅延読み込み
+/* app_test48_02_storage_images.js — 画像の保存(IndexedDB)・直列化・画像の遅延読み込み
  * 読み込み順は 01→07（HTMLの<script>の並び）。全ファイルが同じグローバルスコープを共有します。
  * 各ファイルは、前のファイルで定義された関数・変数を使えます。 */
   const PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';

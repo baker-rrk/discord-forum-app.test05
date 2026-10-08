@@ -303,3 +303,31 @@ const ok=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
   const app=loadApp(), html=fs.readFileSync(HTML,'utf8');
   console.log((/b\.dataset\.tab === tabId/.test(app)&&['postTab','databaseTab','historyTab','settingsTab'].every(t=>html.includes('data-tab="'+t+'"'))?'OK  ':'NG  ')+'メインタブのボタンは data-tab で特定される（操作名を短くしても、選択中の色が移る）');
 }
+
+{ // シナリオウィンドウ（プレビュー／同じウィンドウでの編集）
+  const app=loadApp(), html=fs.readFileSync(HTML,'utf8'), css=fs.readFileSync(path.join(DIR,'discord_forum_app_test'+V+'.css'),'utf8');
+  console.log((/id="editScenarioModal" class="modal-overlay">\s*<div class="modal-card scenario-window/.test(html)&&!/id="eTitle"/.test(html)?'OK  ':'NG  ')+'旧「直接編集」の入力欄は、シナリオウィンドウ（同じ .modal-card の大きさ）に置き換わっている');
+  console.log((/card\.dataset\.sid = sc\.id/.test(app)&&/<tr data-sid=/.test(app)&&/\[data-sid\]/.test(app)?'OK  ':'NG  ')+'一覧のカード・表の行をクリックして開ける（data-sid）');
+  console.log((/window\.__editingScenario = true/.test(app)&&/swRestore\(swSnap\)/.test(app)&&/scheduleDraftSave = function/.test(app)?'OK  ':'NG  ')+'開く前の作業内容を退避して、閉じるときに戻す。編集中は下書きに保存しない');
+  console.log((/\.sw-editing #postForm > \.card:first-child/.test(css)&&/\.sw-preview #swTabs \.ho-tab\.add/.test(css)?'OK  ':'NG  ')+'編集では投稿専用の部分を隠し、プレビュー中はHOを増やせない');
+}
+
+{ // JSONバックアップの統合（追加・更新）
+  const src=fs.readFileSync(path.join(DIR,'app_test'+V+'_00_block_common.js'),'utf8'), e=(c,m)=>console.log((c?'OK  ':'NG  ')+m);
+  const a=src.indexOf('function mergeBackupInto'), end=src.indexOf('const mergeSummaryText'), endLine=src.indexOf('\n',end);
+  const {mergeBackupInto,mergeSummaryText}=new Function(src.slice(a,endLine)+'\nreturn {mergeBackupInto,mergeSummaryText};')();
+  const base={botName:'今のBot',scenarios:[{id:'a',title:'A',updatedAt:100,postedChannels:['c1'],postedInfo:{c1:1},favorite:true},{id:'b',title:'B',updatedAt:200},{id:'same',title:'S',updatedAt:5}],channels:[{id:'c1',name:'旧',webhookUrl:'u1'}],formats:[{id:'fmt_a',name:'旧書式'}],history:[{date:'2026-01-01',title:'h1',channels:'x'}],deletedScenarios:{gone:1,z:2},deletedChannels:{},historyClearedAt:0};
+  const inc={botName:'ファイルのBot',scenarios:[{id:'a',title:'A改',updatedAt:300,postedChannels:['c2'],postedInfo:{c2:1}},{id:'b',title:'B古い',updatedAt:50},{id:'same',title:'S',updatedAt:5},{id:'gone',title:'戻る',updatedAt:1},{id:'n',title:'新規'}],channels:[{id:'c1',name:'新',webhookUrl:'u1'},{id:'c9',name:'追加'}],formats:[{id:'fmt_a',name:'新書式'},{id:'fmt_n',name:'新'}],history:[{date:'2026-01-01',title:'h1',channels:'x'},{date:'2026-02-01',title:'h2',channels:'y'}]};
+  const snapB=JSON.stringify(base), snapI=JSON.stringify(inc), r=mergeBackupInto(base,inc), m=r.merged, S=r.summary, byId=(l,i)=>l.find(x=>x.id===i);
+  e(JSON.stringify(base)===snapB&&JSON.stringify(inc)===snapI,'引数（今のデータ・ファイル）は書き換えない');
+  e(byId(m.scenarios,'a').title==='A改'&&byId(m.scenarios,'a').favorite===true&&byId(m.scenarios,'a').postedChannels.sort().join()==='c1,c2'&&byId(m.scenarios,'a').postedInfo.c1===1&&byId(m.scenarios,'a').postedInfo.c2===1,'同じIDは、ファイルの内容で更新（今だけの項目は残し、投稿済みの記録は合算）');
+  e(byId(m.scenarios,'b').title==='B'&&S.scenKeptNewer===1,'今のデータのほうが新しいシナリオは、更新しない（古いバックアップで巻き戻さない）');
+  e(m.scenarios.some(s=>s.id==='n')&&m.scenarios.some(s=>s.id==='gone')&&S.scenAdded===2&&S.scenUpdated===1&&S.scenSame===1,'ファイルにだけあるシナリオは追加。件数（追加2・更新1・変更なし1）');
+  e(!('gone' in m.deletedScenarios)&&('z' in m.deletedScenarios),'ファイルに含まれるシナリオは削除済みの記録から外して戻し、それ以外の削除記録は保つ');
+  e(byId(m.channels,'c1').name==='新'&&byId(m.channels,'c9')&&S.chAdded===1&&S.chUpdated===1&&byId(m.formats,'fmt_a').name==='新書式'&&S.fmtAdded===1,'チャンネル・フォーマットも、追加と更新');
+  e(m.history.length===2&&S.histAdded===1&&m.botName==='今のBot','履歴は重複なく追加。設定（Bot名など）は今のまま');
+  const r2=mergeBackupInto({...base,historyClearedAt:Date.parse('2026-03-01')},inc); e(r2.merged.history.length===1,'履歴を全消去した日より前のものは、取り込まない');
+  const big=mergeBackupInto({history:Array.from({length:495},(_,i)=>({date:'2025-'+String(i).padStart(4,'0'),title:'t',channels:'c'}))},{history:Array.from({length:30},(_,i)=>({date:'2026-'+String(i).padStart(4,'0'),title:'u',channels:'c'}))}); e(big.merged.history.length===500,'履歴は最大500件');
+  e(mergeBackupInto({},{}).merged.scenarios.length===0&&mergeBackupInto(null,null).summary.scenAdded===0,'空のデータ同士でも動く');
+  e(/追加 2件・更新 1件・変更なし 1件/.test(mergeSummaryText(S))&&/今のデータのほうが新しいため更新しない 1件/.test(mergeSummaryText(S)),'件数の説明文');
+}
